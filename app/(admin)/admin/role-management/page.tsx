@@ -18,24 +18,27 @@ import { Select } from '@/src/components/ui/select';
  */
 export default function RoleManagementPage() {
   const { user } = useAuth();
+
+  // Only fetch all departments if user is Super Admin
+  // Managers don't have permission for this endpoint
   const { data: departments, isLoading: loadingDepartments } = useDepartments();
   const { data: roles, isLoading: loadingRoles } = useRoles();
   const assignRole = useAssignRole();
   const removeRole = useRemoveRole();
 
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  // For Super Admin: allow department selection
+  // For Manager: use their department ID directly
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+    user?.isSuperAdmin ? null : (user?.departmentId || null)
+  );
+
   const { data: users, isLoading: loadingUsers } = useDepartmentUsers(
     selectedDepartment || undefined
   );
 
-  // Filter departments based on user role
-  const visibleDepartments = user?.isSuperAdmin
-    ? departments
-    : departments?.filter((dept) => dept.id === user?.departmentId);
-
-  // Auto-select first department
-  if (!selectedDepartment && visibleDepartments && visibleDepartments.length > 0) {
-    setSelectedDepartment(visibleDepartments[0].id);
+  // Auto-select first department for Super Admin
+  if (user?.isSuperAdmin && !selectedDepartment && departments && departments.length > 0) {
+    setSelectedDepartment(departments[0].id);
   }
 
   const handleAssignRole = async (userId: string, roleId: string) => {
@@ -46,7 +49,12 @@ export default function RoleManagementPage() {
     await removeRole.mutateAsync({ userId, roleId });
   };
 
-  if (loadingDepartments || loadingRoles) {
+  // Only wait for departments if Super Admin
+  const isInitialLoading = user?.isSuperAdmin
+    ? (loadingDepartments || loadingRoles)
+    : loadingRoles;
+
+  if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -67,38 +75,41 @@ export default function RoleManagementPage() {
           </p>
         </div>
 
-        {/* Department Selector */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Departman Seçin</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {visibleDepartments?.map((dept) => (
-                <button
-                  key={dept.id}
-                  onClick={() => setSelectedDepartment(dept.id)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedDepartment === dept.id
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-slate-200 hover:border-blue-300'
-                  }`}
-                >
-                  <p className="font-semibold text-slate-800">{dept.name}</p>
-                  <p className="text-sm text-slate-500 mt-1">{dept.externalIdentifier}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Department Selector - Only for Super Admin */}
+        {user?.isSuperAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Departman Seçin</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {departments?.map((dept) => (
+                  <button
+                    key={dept.id}
+                    onClick={() => setSelectedDepartment(dept.id)}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedDepartment === dept.id
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <p className="font-semibold text-slate-800">{dept.name}</p>
+                    <p className="text-sm text-slate-500 mt-1">{dept.externalIdentifier}</p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Users List */}
         {selectedDepartment && (
           <Card>
             <CardHeader>
               <CardTitle>
-                Kullanıcılar -{' '}
-                {visibleDepartments?.find((d) => d.id === selectedDepartment)?.name}
+                {user?.isSuperAdmin
+                  ? `Kullanıcılar - ${departments?.find((d) => d.id === selectedDepartment)?.name || 'Departman'}`
+                  : 'Departman Kullanıcıları'}
               </CardTitle>
             </CardHeader>
             <CardContent>
