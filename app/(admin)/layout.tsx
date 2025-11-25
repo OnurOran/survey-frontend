@@ -1,12 +1,10 @@
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Yönetim Paneli - Metro Istanbul',
-  description: 'Anket, kullanıcı ve departman yönetimi',
-};
+import { AdminGuard } from '@/src/features/auth/components/AdminGuard';
 
 /**
  * Admin Layout - Metro Istanbul Branded
+ * Protected by AdminGuard - only accessible to users with roles/permissions
  */
 export default function AdminLayout({
   children,
@@ -14,7 +12,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <AdminGuard>
+      <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 shadow-sm">
         {/* Logo Section */}
@@ -38,7 +37,7 @@ export default function AdminLayout({
           </a>
 
           <a
-            href="#"
+            href="/admin/surveys"
             className="flex items-center px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium"
           >
             <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,13 +47,13 @@ export default function AdminLayout({
           </a>
 
           <a
-            href="#"
+            href="/admin/role-management"
             className="flex items-center px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium"
           >
             <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
-            Kullanıcılar
+            Rol Yönetimi
           </a>
 
           <a
@@ -99,5 +98,6 @@ export default function AdminLayout({
         </main>
       </div>
     </div>
+    </AdminGuard>
   );
 }

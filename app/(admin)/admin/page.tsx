@@ -1,19 +1,20 @@
 'use client';
 
-import { ProtectedRoute } from '@/src/features/auth/components/ProtectedRoute';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 
 /**
  * Admin Dashboard - Metro Istanbul
+ * Protected by AdminGuard in the layout
  */
 export default function AdminDashboardPage() {
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   return (
-    <ProtectedRoute>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -118,6 +119,7 @@ export default function AdminDashboardPage() {
               <Button
                 className="w-full"
                 style={{ backgroundColor: '#0055a5' }}
+                onClick={() => router.push('/admin/surveys')}
               >
                 Anketleri Görüntüle
               </Button>
@@ -206,6 +208,5 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </ProtectedRoute>
   );
 }
