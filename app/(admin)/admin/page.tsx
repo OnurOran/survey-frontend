@@ -2,16 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
+import { useGlobalStats } from '@/src/features/dashboard/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 
 /**
  * Admin Dashboard - Metro Istanbul
  * Protected by AdminGuard in the layout
+ * For Super Admin only
  */
 export default function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { data: stats, isLoading } = useGlobalStats();
 
   return (
     <div className="space-y-6">
@@ -33,13 +36,17 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-l-4 border-l-blue-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Toplam Anket</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-2">24</p>
+                  {isLoading ? (
+                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                  ) : (
+                    <p className="text-3xl font-bold text-slate-800 mt-2">{stats?.totalSurveys ?? 0}</p>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +62,11 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Aktif Anket</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-2">8</p>
+                  {isLoading ? (
+                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                  ) : (
+                    <p className="text-3xl font-bold text-green-700 mt-2">{stats?.activeSurveys ?? 0}</p>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,28 +81,16 @@ export default function AdminDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Katılımcı</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-2">1,247</p>
+                  <p className="text-sm font-medium text-slate-600">Toplam Katılım</p>
+                  {isLoading ? (
+                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                  ) : (
+                    <p className="text-3xl font-bold text-purple-700 mt-2">{stats?.totalParticipations ?? 0}</p>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-orange-600">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Departman</p>
-                  <p className="text-3xl font-bold text-slate-800 mt-2">12</p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
               </div>

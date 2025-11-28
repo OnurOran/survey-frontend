@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
+import { useDepartmentStats } from '@/src/features/dashboard/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { isSuperAdmin } from '@/src/lib/permissions';
@@ -15,6 +16,7 @@ import { useEffect } from 'react';
 export default function DepartmentDashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { data: stats, isLoading } = useDepartmentStats();
 
   // Redirect Super Admins to main admin dashboard
   useEffect(() => {
@@ -48,10 +50,10 @@ export default function DepartmentDashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="hover:shadow-lg transition-shadow border-blue-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Departman Kullanıcıları</CardTitle>
+            <CardTitle className="text-sm font-medium">Toplam Anket</CardTitle>
             <svg
               className="w-4 h-4 text-blue-600"
               fill="none"
@@ -62,14 +64,18 @@ export default function DepartmentDashboardPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">-</div>
+            {isLoading ? (
+              <div className="text-2xl font-bold text-slate-400">...</div>
+            ) : (
+              <div className="text-2xl font-bold text-slate-800">{stats?.totalSurveys ?? 0}</div>
+            )}
             <p className="text-xs text-slate-600 mt-1">
-              Departmanınızdaki toplam kullanıcı sayısı
+              Departmanınızdaki tüm anketler
             </p>
           </CardContent>
         </Card>
@@ -87,21 +93,25 @@ export default function DepartmentDashboardPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">-</div>
+            {isLoading ? (
+              <div className="text-2xl font-bold text-slate-400">...</div>
+            ) : (
+              <div className="text-2xl font-bold text-green-700">{stats?.activeSurveys ?? 0}</div>
+            )}
             <p className="text-xs text-slate-600 mt-1">
-              Şu anda yanıtlanabilir anket sayısı
+              Şu anda yanıtlanabilir anketler
             </p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow border-orange-100">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Katılım Oranı</CardTitle>
+            <CardTitle className="text-sm font-medium">Toplam Katılım</CardTitle>
             <svg
               className="w-4 h-4 text-orange-600"
               fill="none"
@@ -112,14 +122,18 @@ export default function DepartmentDashboardPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
               />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">-%</div>
+            {isLoading ? (
+              <div className="text-2xl font-bold text-slate-400">...</div>
+            ) : (
+              <div className="text-2xl font-bold text-orange-700">{stats?.totalParticipations ?? 0}</div>
+            )}
             <p className="text-xs text-slate-600 mt-1">
-              Departman anket katılım oranı
+              Toplam anket yanıtı sayısı
             </p>
           </CardContent>
         </Card>

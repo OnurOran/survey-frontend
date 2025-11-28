@@ -88,6 +88,19 @@ export interface PublishSurveyRequest {
   endDate: string; // ISO 8601 format
 }
 
+export interface SurveyListItemDto {
+  id: string;
+  title: string;
+  description: string;
+  departmentId: string;
+  accessType: number; // 0 = Internal, 1 = Public
+  isActive: boolean;
+  createdAt: string;
+  startDate: string | null;
+  endDate: string | null;
+  createdBy: string;
+}
+
 export interface SurveyDetailDto {
   id: string;
   title: string;
