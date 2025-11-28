@@ -78,19 +78,18 @@ export interface CreateSurveyRequest {
 
 export interface CreateQuestionDto {
   text: string;
-  description?: string | null;
   type: QuestionType;
   order: number;
   isRequired: boolean;
-  attachment?: AttachmentDto | null;
   options: CreateOptionDto[] | null;
-  allowedAttachmentContentTypes?: string[]; // Only for FileUpload type
+  attachment?: AttachmentDto | null;
+  allowedAttachmentContentTypes?: string[] | null; // Only for FileUpload type
 }
 
 export interface CreateOptionDto {
   text: string;
   order: number;
-  value: number;
+  value: number | null;
   attachment?: AttachmentDto | null;
 }
 

@@ -68,35 +68,31 @@ export default function NewSurveyPage() {
       return;
     }
 
-    // Convert to API format
-    const request: CreateSurveyRequest = {
-      title: survey.title,
-      description: survey.description,
-      accessType: survey.accessType,
-      questions: survey.questions.map((q): CreateQuestionDto => ({
-        text: q.text,
-        description: null, // Description hidden from UI for now
-        type: q.type,
-        order: q.order,
-        isRequired: q.isRequired,
-        attachment: q.attachment,
-        options:
+    // Convert to API format with PascalCase for C# backend
+    // IMPORTANT: Field order must match backend record constructor parameters
+    const request: any = {
+      Title: survey.title,
+      Description: survey.description,
+      AccessType: survey.accessType,
+      Questions: survey.questions.map((q) => ({
+        Text: q.text,
+        Type: q.type,
+        Order: q.order,
+        IsRequired: q.isRequired,
+        Options:
           q.type === 'OpenText' || q.type === 'FileUpload'
             ? null
             : q.options.map((opt) => ({
-                text: opt.text,
-                order: opt.order,
-                value: 0, // Value hidden from UI for now
-                attachment: opt.attachment,
+                Text: opt.text,
+                Order: opt.order,
+                Value: opt.value || 0,
+                Attachment: opt.attachment || null,
               })),
-        allowedAttachmentContentTypes: q.type === 'FileUpload' ? q.allowedAttachmentContentTypes : undefined,
+        Attachment: q.attachment || null,
+        AllowedAttachmentContentTypes: q.type === 'FileUpload' ? q.allowedAttachmentContentTypes || null : null,
       })),
+      Attachment: survey.attachment || null,
     };
-
-    // Add survey attachment if exists
-    if (survey.attachment) {
-      (request as any).attachment = survey.attachment;
-    }
 
     try {
       const surveyId = await createSurvey.mutateAsync(request);

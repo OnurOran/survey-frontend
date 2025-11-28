@@ -114,11 +114,12 @@ export default function SurveyDetailPage() {
 
     const questionData: CreateQuestionDto = {
       text: newQuestionText,
-      description: null,
       type: newQuestionType,
       order: (survey?.questions.length || 0) + 1,
       isRequired: newQuestionRequired,
       options,
+      attachment: null,
+      allowedAttachmentContentTypes: null,
     };
 
     try {

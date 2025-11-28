@@ -13,7 +13,8 @@ export function useCreateSurvey() {
 
   return useMutation({
     mutationFn: async (data: CreateSurveyRequest) => {
-      const response = await apiClient.post('/surveys', data);
+      console.log('🚀 Sending survey creation request:', JSON.stringify(data, null, 2));
+      const response = await apiClient.post('/Surveys', data);
       // Extract survey ID from Location header
       const location = response.headers['location'];
       if (location) {
