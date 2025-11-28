@@ -14,8 +14,9 @@ export type AccessType = 'Internal' | 'Public';
  * SingleSelect: Radio button - single choice
  * MultiSelect: Checkboxes - multiple choices
  * OpenText: Text input/textarea
+ * FileUpload: File upload - max 5MB
  */
-export type QuestionType = 'SingleSelect' | 'MultiSelect' | 'OpenText';
+export type QuestionType = 'SingleSelect' | 'MultiSelect' | 'OpenText' | 'FileUpload';
 
 // ============================================
 // AUTH
@@ -61,10 +62,17 @@ export interface UpdateAdminPasswordRequest {
 // SURVEY
 // ============================================
 
+export interface AttachmentDto {
+  fileName: string;
+  contentType: string;
+  base64Content: string;
+}
+
 export interface CreateSurveyRequest {
   title: string;
   description: string;
   accessType: AccessType;
+  attachment?: AttachmentDto | null;
   questions: CreateQuestionDto[];
 }
 
@@ -74,13 +82,16 @@ export interface CreateQuestionDto {
   type: QuestionType;
   order: number;
   isRequired: boolean;
+  attachment?: AttachmentDto | null;
   options: CreateOptionDto[] | null;
+  allowedAttachmentContentTypes?: string[]; // Only for FileUpload type
 }
 
 export interface CreateOptionDto {
   text: string;
   order: number;
   value: number;
+  attachment?: AttachmentDto | null;
 }
 
 export interface PublishSurveyRequest {
