@@ -14,6 +14,11 @@ import { Textarea } from '@/src/components/ui/textarea';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import type { QuestionType, CreateQuestionDto, CreateOptionDto } from '@/src/types';
 
+// Helper function to get attachment URL
+const getAttachmentUrl = (attachmentId: string) => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/Attachments/${attachmentId}`;
+};
+
 /**
  * Survey Detail Page
  * Shows survey details and allows publishing
@@ -206,6 +211,18 @@ export default function SurveyDetailPage() {
               </span>
             </div>
             <p className="text-slate-600">{survey.description}</p>
+
+            {/* Survey Attachment */}
+            {survey.attachment && (
+              <div className="mt-4">
+                <img
+                  src={getAttachmentUrl(survey.attachment.id)}
+                  alt={survey.attachment.fileName}
+                  className="max-w-full h-auto rounded-lg border border-slate-200"
+                  style={{ maxHeight: '300px' }}
+                />
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push('/admin/surveys')}>
@@ -477,15 +494,37 @@ export default function SurveyDetailPage() {
                           </div>
                         </div>
 
+                        {/* Question Attachment */}
+                        {question.attachment && (
+                          <div className="mt-3">
+                            <img
+                              src={getAttachmentUrl(question.attachment.id)}
+                              alt={question.attachment.fileName}
+                              className="max-w-full h-auto rounded border border-slate-200"
+                              style={{ maxHeight: '300px' }}
+                            />
+                          </div>
+                        )}
+
                         {question.options && question.options.length > 0 && (
-                          <div className="mt-3 space-y-1">
+                          <div className="mt-3 space-y-2">
                             {question.options.map((option) => (
-                              <div
-                                key={option.id}
-                                className="flex items-center gap-2 text-sm text-slate-600 pl-4"
-                              >
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
-                                {option.text} <span className="text-xs text-slate-400">({option.value})</span>
+                              <div key={option.id} className="pl-4">
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                                  {option.text} <span className="text-xs text-slate-400">({option.value})</span>
+                                </div>
+                                {/* Option Attachment */}
+                                {option.attachment && (
+                                  <div className="mt-2 ml-4">
+                                    <img
+                                      src={getAttachmentUrl(option.attachment.id)}
+                                      alt={option.attachment.fileName}
+                                      className="max-w-full h-auto rounded border border-slate-200"
+                                      style={{ maxHeight: '150px' }}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

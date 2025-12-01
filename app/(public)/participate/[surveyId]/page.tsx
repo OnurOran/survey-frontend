@@ -16,6 +16,11 @@ import type { QuestionDto } from '@/src/types';
 // Character limit for open text answers
 const MAX_TEXT_ANSWER_LENGTH = 2000;
 
+// Helper function to get attachment URL
+const getAttachmentUrl = (attachmentId: string) => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/Attachments/${attachmentId}`;
+};
+
 /**
  * Public Survey Participation Page
  * Accessible via shareable link: /participate/{surveyId}
@@ -191,6 +196,18 @@ export default function ParticipatePage() {
             {/* Survey Description */}
             <p className="text-slate-700 whitespace-pre-wrap">{survey.description}</p>
 
+            {/* Survey Attachment */}
+            {survey.attachment && (
+              <div className="pt-4">
+                <img
+                  src={getAttachmentUrl(survey.attachment.id)}
+                  alt={survey.attachment.fileName}
+                  className="max-w-full h-auto rounded-lg border border-slate-200"
+                  style={{ maxHeight: '300px' }}
+                />
+              </div>
+            )}
+
             {/* Survey Info */}
             <div className="pt-4 space-y-2 text-sm text-slate-600">
               <p>• Toplam {survey.questions.length} soru</p>
@@ -270,15 +287,38 @@ export default function ParticipatePage() {
             )}
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Question Attachment */}
+            {currentQuestion.attachment && (
+              <div className="mb-4">
+                <img
+                  src={getAttachmentUrl(currentQuestion.attachment.id)}
+                  alt={currentQuestion.attachment.fileName}
+                  className="max-w-full h-auto rounded-lg border border-slate-200"
+                  style={{ maxHeight: '400px' }}
+                />
+              </div>
+            )}
             {/* Single Select (Radio) */}
             {currentQuestion.type === 'SingleSelect' && (
               <RadioGroup value={currentAnswer} onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}>
                 {currentQuestion.options.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.id} id={option.id} />
-                    <Label htmlFor={option.id} className="cursor-pointer">
-                      {option.text}
-                    </Label>
+                  <div key={option.id} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.id} id={option.id} />
+                      <Label htmlFor={option.id} className="cursor-pointer">
+                        {option.text}
+                      </Label>
+                    </div>
+                    {option.attachment && (
+                      <div className="ml-6">
+                        <img
+                          src={getAttachmentUrl(option.attachment.id)}
+                          alt={option.attachment.fileName}
+                          className="max-w-full h-auto rounded border border-slate-200"
+                          style={{ maxHeight: '200px' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </RadioGroup>
@@ -288,24 +328,36 @@ export default function ParticipatePage() {
             {currentQuestion.type === 'MultiSelect' && (
               <div className="space-y-3">
                 {currentQuestion.options.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={option.id}
-                      checked={currentAnswer?.includes(option.id) || false}
-                      onCheckedChange={(checked) => {
-                        const newValue = currentAnswer ? [...currentAnswer] : [];
-                        if (checked) {
-                          newValue.push(option.id);
-                        } else {
-                          const index = newValue.indexOf(option.id);
-                          if (index > -1) newValue.splice(index, 1);
-                        }
-                        handleAnswerChange(currentQuestion.id, newValue);
-                      }}
-                    />
-                    <Label htmlFor={option.id} className="cursor-pointer">
-                      {option.text}
-                    </Label>
+                  <div key={option.id} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={option.id}
+                        checked={currentAnswer?.includes(option.id) || false}
+                        onCheckedChange={(checked) => {
+                          const newValue = currentAnswer ? [...currentAnswer] : [];
+                          if (checked) {
+                            newValue.push(option.id);
+                          } else {
+                            const index = newValue.indexOf(option.id);
+                            if (index > -1) newValue.splice(index, 1);
+                          }
+                          handleAnswerChange(currentQuestion.id, newValue);
+                        }}
+                      />
+                      <Label htmlFor={option.id} className="cursor-pointer">
+                        {option.text}
+                      </Label>
+                    </div>
+                    {option.attachment && (
+                      <div className="ml-6">
+                        <img
+                          src={getAttachmentUrl(option.attachment.id)}
+                          alt={option.attachment.fileName}
+                          className="max-w-full h-auto rounded border border-slate-200"
+                          style={{ maxHeight: '200px' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

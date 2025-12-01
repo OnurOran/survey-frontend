@@ -62,10 +62,19 @@ export interface UpdateAdminPasswordRequest {
 // SURVEY
 // ============================================
 
+// Attachment for upload (CREATE operations)
 export interface AttachmentDto {
   fileName: string;
   contentType: string;
   base64Content: string;
+}
+
+// Attachment metadata from backend (READ operations)
+export interface AttachmentMetadata {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
 }
 
 export interface CreateSurveyRequest {
@@ -125,6 +134,7 @@ export interface SurveyDetailDto {
   startDate: string | null;
   endDate: string | null;
   questions: QuestionDto[];
+  attachment?: AttachmentMetadata | null;
 }
 
 export interface QuestionDto {
@@ -135,6 +145,8 @@ export interface QuestionDto {
   order: number;
   isRequired: boolean;
   options: OptionDto[];
+  attachment?: AttachmentMetadata | null;
+  allowedAttachmentContentTypes?: string[] | null;
 }
 
 export interface OptionDto {
@@ -142,6 +154,7 @@ export interface OptionDto {
   text: string;
   order: number;
   value: number;
+  attachment?: AttachmentMetadata | null;
 }
 
 // ============================================
