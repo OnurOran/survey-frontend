@@ -13,6 +13,9 @@ import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
 import { Checkbox } from '@/src/components/ui/checkbox';
 import type { QuestionDto } from '@/src/types';
 
+// Character limit for open text answers
+const MAX_TEXT_ANSWER_LENGTH = 2000;
+
 /**
  * Public Survey Participation Page
  * Accessible via shareable link: /participate/{surveyId}
@@ -310,12 +313,32 @@ export default function ParticipatePage() {
 
             {/* Open Text */}
             {currentQuestion.type === 'OpenText' && (
-              <Textarea
-                value={currentAnswer || ''}
-                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                placeholder="Cevabınızı buraya yazın..."
-                rows={5}
-              />
+              <div className="space-y-2">
+                <Textarea
+                  value={currentAnswer || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= MAX_TEXT_ANSWER_LENGTH) {
+                      handleAnswerChange(currentQuestion.id, value);
+                    }
+                  }}
+                  placeholder="Cevabınızı buraya yazın..."
+                  rows={5}
+                  maxLength={MAX_TEXT_ANSWER_LENGTH}
+                />
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">
+                    Maksimum {MAX_TEXT_ANSWER_LENGTH} karakter
+                  </span>
+                  <span className={`${
+                    (currentAnswer?.length || 0) > MAX_TEXT_ANSWER_LENGTH * 0.9
+                      ? 'text-orange-600 font-medium'
+                      : 'text-slate-600'
+                  }`}>
+                    {currentAnswer?.length || 0} / {MAX_TEXT_ANSWER_LENGTH}
+                  </span>
+                </div>
+              </div>
             )}
 
             {/* File Upload - TODO */}
