@@ -40,6 +40,9 @@ export interface QuestionFormData {
 export interface SurveyFormData {
   title: string;
   description: string;
+  introText?: string;
+  consentText?: string;
+  outroText?: string;
   accessType: 'Internal' | 'Public';
   attachment: AttachmentData | null;
   questions: QuestionFormData[];

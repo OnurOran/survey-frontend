@@ -71,6 +71,9 @@ export interface AttachmentDto {
 export interface CreateSurveyRequest {
   title: string;
   description: string;
+  introText?: string | null;
+  consentText?: string | null;
+  outroText?: string | null;
   accessType: AccessType;
   attachment?: AttachmentDto | null;
   questions: CreateQuestionDto[];
@@ -115,6 +118,9 @@ export interface SurveyDetailDto {
   id: string;
   title: string;
   description: string;
+  introText?: string | null;
+  consentText?: string | null;
+  outroText?: string | null;
   accessType: AccessType;
   startDate: string | null;
   endDate: string | null;

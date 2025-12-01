@@ -20,6 +20,9 @@ export default function NewSurveyPage() {
   const [survey, setSurvey] = useState<SurveyFormData>({
     title: '',
     description: '',
+    introText: '',
+    consentText: '',
+    outroText: '',
     accessType: 'Internal',
     attachment: null,
     questions: [],
@@ -73,6 +76,9 @@ export default function NewSurveyPage() {
     const request: any = {
       Title: survey.title,
       Description: survey.description,
+      IntroText: survey.introText || null,
+      ConsentText: survey.consentText || null,
+      OutroText: survey.outroText || null,
       AccessType: survey.accessType,
       Questions: survey.questions.map((q) => ({
         Text: q.text,
@@ -139,10 +145,16 @@ export default function NewSurveyPage() {
       <SurveyBasicInfo
         title={survey.title}
         description={survey.description}
+        introText={survey.introText}
+        consentText={survey.consentText}
+        outroText={survey.outroText}
         accessType={survey.accessType}
         attachment={survey.attachment}
         onTitleChange={(title) => updateSurvey('title', title)}
         onDescriptionChange={(description) => updateSurvey('description', description)}
+        onIntroTextChange={(introText) => updateSurvey('introText', introText)}
+        onConsentTextChange={(consentText) => updateSurvey('consentText', consentText)}
+        onOutroTextChange={(outroText) => updateSurvey('outroText', outroText)}
         onAccessTypeChange={(accessType) => updateSurvey('accessType', accessType)}
         onAttachmentChange={(attachment) => updateSurvey('attachment', attachment)}
       />

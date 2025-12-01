@@ -32,6 +32,7 @@ export default function ParticipatePage() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Start participation when user begins
   const handleStart = async () => {
@@ -146,15 +147,16 @@ export default function ParticipatePage() {
   // Completed state
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Card className="max-w-2xl">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full">
           <CardHeader>
             <CardTitle className="text-center text-2xl text-green-600">Teşekkürler!</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center space-y-4">
-              <p className="text-slate-700">Anket katılımınız başarıyla tamamlandı.</p>
-              <p className="text-slate-600">Katkılarınız için teşekkür ederiz.</p>
+              <p className="text-slate-700 whitespace-pre-wrap">
+                {survey.outroText || 'Anket katılımınız başarıyla tamamlandı.\n\nKatkılarınız için teşekkür ederiz.'}
+              </p>
               <div className="mt-6">
                 <Button onClick={() => router.push('/')} variant="outline">
                   Ana Sayfaya Dön
@@ -176,20 +178,52 @@ export default function ParticipatePage() {
             <CardTitle className="text-3xl text-slate-800">{survey.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Intro Text (Legal/GDPR Information) */}
+            {survey.introText && (
+              <div className="bg-slate-100 border border-slate-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-slate-700 whitespace-pre-wrap">{survey.introText}</p>
+              </div>
+            )}
+
+            {/* Survey Description */}
             <p className="text-slate-700 whitespace-pre-wrap">{survey.description}</p>
+
+            {/* Survey Info */}
             <div className="pt-4 space-y-2 text-sm text-slate-600">
               <p>• Toplam {survey.questions.length} soru</p>
               <p>• Tahmini süre: {Math.ceil(survey.questions.length * 0.5)} dakika</p>
             </div>
+
+            {/* Consent Checkbox (if consent text exists) */}
+            {survey.consentText && (
+              <div className="flex items-start space-x-3 border-t border-slate-200 pt-4 mt-4">
+                <Checkbox
+                  id="consent"
+                  checked={consentGiven}
+                  onCheckedChange={(checked) => setConsentGiven(checked as boolean)}
+                  className="mt-1"
+                />
+                <Label htmlFor="consent" className="text-sm text-slate-700 cursor-pointer leading-relaxed">
+                  {survey.consentText}
+                </Label>
+              </div>
+            )}
+
+            {/* Start Button */}
             <div className="pt-6">
               <Button
                 onClick={handleStart}
-                disabled={startParticipation.isPending}
+                disabled={startParticipation.isPending || (survey.consentText && !consentGiven)}
                 style={{ backgroundColor: '#0055a5' }}
                 className="w-full"
               >
                 {startParticipation.isPending ? 'Başlatılıyor...' : 'Ankete Başla'}
               </Button>
+              {survey.consentText && !consentGiven && (
+                <p className="text-sm text-red-600 mt-2 text-center">
+                  Devam etmek için lütfen onay kutusunu işaretleyin.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
