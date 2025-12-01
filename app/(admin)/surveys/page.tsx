@@ -6,8 +6,8 @@ import { useSurveys, usePublishSurvey } from '@/src/features/survey/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
-import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
+import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 
 /**
  * Survey List Page
@@ -21,8 +21,8 @@ export default function SurveysPage() {
 
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   const getSurveyStatus = (startDate: string | null, endDate: string | null) => {
     if (!startDate || !endDate) {
@@ -53,8 +53,8 @@ export default function SurveysPage() {
 
   const handlePublishClick = (surveyId: string) => {
     setSelectedSurveyId(surveyId);
-    setStartDate('');
-    setEndDate('');
+    setStartDate(null);
+    setEndDate(null);
     setPublishDialogOpen(true);
   };
 
@@ -64,10 +64,7 @@ export default function SurveysPage() {
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (end <= start) {
+    if (endDate <= startDate) {
       alert('Bitiş tarihi başlangıç tarihinden sonra olmalıdır');
       return;
     }
@@ -76,8 +73,8 @@ export default function SurveysPage() {
       await publishSurvey.mutateAsync({
         surveyId: selectedSurveyId,
         dates: {
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
+          StartDate: startDate.toISOString(),
+          EndDate: endDate.toISOString(),
         },
       });
       setPublishDialogOpen(false);
@@ -293,22 +290,26 @@ export default function SurveysPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="startDate">Başlangıç Tarihi *</Label>
-              <Input
+              <Label htmlFor="startDate">Başlangıç Tarihi ve Saati *</Label>
+              <DateTimePicker
                 id="startDate"
-                type="datetime-local"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                selected={startDate}
+                onChange={(date) => setStartDate(date)}
+                placeholderText="Başlangıç tarihini seçin"
+                minDate={new Date()}
               />
+              <p className="text-xs text-slate-500 mt-1">Format: GG.AA.YYYY SS:DD (24 saat formatı)</p>
             </div>
             <div>
-              <Label htmlFor="endDate">Bitiş Tarihi *</Label>
-              <Input
+              <Label htmlFor="endDate">Bitiş Tarihi ve Saati *</Label>
+              <DateTimePicker
                 id="endDate"
-                type="datetime-local"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                selected={endDate}
+                onChange={(date) => setEndDate(date)}
+                placeholderText="Bitiş tarihini seçin"
+                minDate={startDate || new Date()}
               />
+              <p className="text-xs text-slate-500 mt-1">Format: GG.AA.YYYY SS:DD (24 saat formatı)</p>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button

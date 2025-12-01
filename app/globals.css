@@ -43,3 +43,63 @@ body {
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* React DatePicker Custom Styles */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.react-datepicker__header {
+  background-color: var(--surface-secondary);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.react-datepicker__current-month {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+  color: var(--foreground);
+  width: 2rem;
+  line-height: 2rem;
+  margin: 0.2rem;
+}
+
+.react-datepicker__day:hover {
+  background-color: var(--surface-secondary);
+  border-radius: 0.25rem;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: var(--metro-blue);
+  color: white;
+  border-radius: 0.25rem;
+}
+
+.react-datepicker__day--selected:hover {
+  background-color: var(--metro-blue-dark);
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid var(--border);
+}
+
+.react-datepicker__time-list-item--selected {
+  background-color: var(--metro-blue) !important;
+  color: white !important;
+}
+
+.react-datepicker__time-list-item:hover {
+  background-color: var(--surface-secondary) !important;
+}

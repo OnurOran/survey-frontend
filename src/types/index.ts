@@ -94,8 +94,8 @@ export interface CreateOptionDto {
 }
 
 export interface PublishSurveyRequest {
-  startDate: string; // ISO 8601 format
-  endDate: string; // ISO 8601 format
+  StartDate: string; // ISO 8601 format (PascalCase for C# backend)
+  EndDate: string; // ISO 8601 format (PascalCase for C# backend)
 }
 
 export interface SurveyListItemDto {
@@ -143,7 +143,7 @@ export interface OptionDto {
 // ============================================
 
 export interface StartParticipationRequest {
-  surveyId: string;
+  SurveyId: string; // PascalCase for C# backend
 }
 
 export interface SubmitAnswerRequest {
