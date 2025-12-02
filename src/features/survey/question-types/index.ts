@@ -12,6 +12,7 @@ import { singleSelectConfig } from './SingleSelect';
 import { multiSelectConfig } from './MultiSelect';
 import { openTextConfig } from './OpenText';
 import { fileUploadConfig } from './FileUpload';
+import { conditionalConfig } from './Conditional';
 import { registerQuestionType } from './registry';
 
 // Register all question types
@@ -19,6 +20,7 @@ registerQuestionType(singleSelectConfig);
 registerQuestionType(multiSelectConfig);
 registerQuestionType(openTextConfig);
 registerQuestionType(fileUploadConfig);
+registerQuestionType(conditionalConfig);
 
 // Export individual configs for direct access if needed
-export { singleSelectConfig, multiSelectConfig, openTextConfig, fileUploadConfig };
+export { singleSelectConfig, multiSelectConfig, openTextConfig, fileUploadConfig, conditionalConfig };

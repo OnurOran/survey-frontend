@@ -96,6 +96,27 @@ export default function NewSurveyPage() {
               })),
         Attachment: q.attachment || null,
         AllowedAttachmentContentTypes: q.type === 'FileUpload' ? q.allowedAttachmentContentTypes || null : null,
+        ChildQuestions:
+          q.type === 'Conditional' && q.childQuestions
+            ? q.childQuestions.map((cq) => ({
+                ParentOptionOrder: cq.parentOptionOrder,
+                Text: cq.text,
+                Type: cq.type,
+                Order: cq.order,
+                IsRequired: cq.isRequired,
+                Options:
+                  cq.type === 'OpenText' || cq.type === 'FileUpload'
+                    ? null
+                    : cq.options.map((opt) => ({
+                        Text: opt.text,
+                        Order: opt.order,
+                        Value: opt.value || 0,
+                        Attachment: opt.attachment || null,
+                      })),
+                Attachment: cq.attachment || null,
+                AllowedAttachmentContentTypes: cq.type === 'FileUpload' ? cq.allowedAttachmentContentTypes || null : null,
+              }))
+            : null,
       })),
       Attachment: survey.attachment || null,
     };

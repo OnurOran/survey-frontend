@@ -21,6 +21,21 @@ export interface OptionFormData {
 }
 
 /**
+ * Child question form data (for Conditional questions)
+ */
+export interface ChildQuestionFormData {
+  parentOptionOrder: number; // Which option this child belongs to (1, 2, or 3)
+  text: string;
+  description?: string;
+  type: QuestionType;
+  order: number;
+  isRequired: boolean;
+  attachment: AttachmentData | null;
+  options: OptionFormData[];
+  allowedAttachmentContentTypes?: string[]; // Only for FileUpload
+}
+
+/**
  * Question form data (used in editor)
  */
 export interface QuestionFormData {
@@ -32,6 +47,7 @@ export interface QuestionFormData {
   attachment: AttachmentData | null;
   options: OptionFormData[];
   allowedAttachmentContentTypes?: string[]; // Only for FileUpload
+  childQuestions?: ChildQuestionFormData[]; // Only for Conditional type
 }
 
 /**

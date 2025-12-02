@@ -15,8 +15,9 @@ export type AccessType = 'Internal' | 'Public';
  * MultiSelect: Checkboxes - multiple choices
  * OpenText: Text input/textarea
  * FileUpload: File upload - max 5MB
+ * Conditional: Conditional branching - shows different child questions based on selected option
  */
-export type QuestionType = 'SingleSelect' | 'MultiSelect' | 'OpenText' | 'FileUpload';
+export type QuestionType = 'SingleSelect' | 'MultiSelect' | 'OpenText' | 'FileUpload' | 'Conditional';
 
 // ============================================
 // AUTH
@@ -96,6 +97,18 @@ export interface CreateQuestionDto {
   options: CreateOptionDto[] | null;
   attachment?: AttachmentDto | null;
   allowedAttachmentContentTypes?: string[] | null; // Only for FileUpload type
+  childQuestions?: CreateChildQuestionDto[] | null; // Only for Conditional type
+}
+
+export interface CreateChildQuestionDto {
+  parentOptionOrder: number;
+  text: string;
+  type: QuestionType;
+  order: number;
+  isRequired: boolean;
+  options: CreateOptionDto[] | null;
+  attachment?: AttachmentDto | null;
+  allowedAttachmentContentTypes?: string[] | null;
 }
 
 export interface CreateOptionDto {
@@ -155,6 +168,7 @@ export interface OptionDto {
   order: number;
   value: number;
   attachment?: AttachmentMetadata | null;
+  childQuestions?: QuestionDto[] | null; // Only for Conditional question options
 }
 
 // ============================================

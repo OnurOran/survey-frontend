@@ -73,20 +73,35 @@ export default function ParticipatePage() {
       return;
     }
 
+    // For Conditional questions, validate child questions
+    if (currentQuestion.type === 'Conditional' && answer) {
+      const selectedOption = currentQuestion.options.find(opt => opt.id === answer);
+      if (selectedOption && selectedOption.childQuestions) {
+        for (const childQuestion of selectedOption.childQuestions) {
+          const childAnswer = answers[childQuestion.id];
+          if (childQuestion.isRequired && !childAnswer) {
+            alert(`Zorunlu soru cevaplanmadı: ${childQuestion.text}`);
+            return;
+          }
+        }
+      }
+    }
+
     // Prepare answer based on question type
     let textValue = null;
     let optionIds: string[] = [];
 
     if (currentQuestion.type === 'OpenText') {
       textValue = answer || null;
-    } else if (currentQuestion.type === 'SingleSelect') {
+    } else if (currentQuestion.type === 'SingleSelect' || currentQuestion.type === 'Conditional') {
       optionIds = answer ? [answer] : [];
     } else if (currentQuestion.type === 'MultiSelect') {
       optionIds = answer || [];
     }
 
-    // Submit answer
+    // Submit answers
     try {
+      // Submit parent question answer
       await submitAnswer.mutateAsync({
         participationId,
         answer: {
@@ -95,6 +110,37 @@ export default function ParticipatePage() {
           optionIds,
         },
       });
+
+      // For Conditional questions, submit child question answers
+      if (currentQuestion.type === 'Conditional' && answer) {
+        const selectedOption = currentQuestion.options.find(opt => opt.id === answer);
+        if (selectedOption && selectedOption.childQuestions) {
+          for (const childQuestion of selectedOption.childQuestions) {
+            const childAnswer = answers[childQuestion.id];
+            if (childAnswer) {
+              let childTextValue = null;
+              let childOptionIds: string[] = [];
+
+              if (childQuestion.type === 'OpenText') {
+                childTextValue = childAnswer;
+              } else if (childQuestion.type === 'SingleSelect') {
+                childOptionIds = [childAnswer];
+              } else if (childQuestion.type === 'MultiSelect') {
+                childOptionIds = childAnswer;
+              }
+
+              await submitAnswer.mutateAsync({
+                participationId,
+                answer: {
+                  questionId: childQuestion.id,
+                  textValue: childTextValue,
+                  optionIds: childOptionIds,
+                },
+              });
+            }
+          }
+        }
+      }
 
       // Move to next question or complete
       if (currentQuestionIndex < survey.questions.length - 1) {
@@ -390,6 +436,127 @@ export default function ParticipatePage() {
                     {currentAnswer?.length || 0} / {MAX_TEXT_ANSWER_LENGTH}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Conditional (Shows child questions based on selection) */}
+            {currentQuestion.type === 'Conditional' && (
+              <div className="space-y-4">
+                {/* Parent options */}
+                <RadioGroup value={currentAnswer} onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}>
+                  {currentQuestion.options.map((option) => (
+                    <div key={option.id}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value={option.id} id={option.id} />
+                        <Label htmlFor={option.id} className="cursor-pointer font-medium">
+                          {option.text}
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
+
+                {/* Child questions (shown when parent option is selected) */}
+                {currentAnswer && currentQuestion.options.map((option) => {
+                  if (option.id !== currentAnswer) return null;
+                  if (!option.childQuestions || option.childQuestions.length === 0) return null;
+
+                  return (
+                    <div key={option.id} className="mt-6 space-y-6 pl-6 border-l-4 border-blue-300">
+                      {option.childQuestions.map((childQuestion) => (
+                        <Card key={childQuestion.id} className="border-slate-200 bg-slate-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base text-slate-800">
+                              {childQuestion.text}
+                              {childQuestion.isRequired && <span className="text-red-500 ml-1">*</span>}
+                            </CardTitle>
+                            {childQuestion.description && (
+                              <p className="text-sm text-slate-600 mt-1">{childQuestion.description}</p>
+                            )}
+                          </CardHeader>
+                          <CardContent>
+                            {/* Child Question Attachment */}
+                            {childQuestion.attachment && (
+                              <div className="mb-4">
+                                <img
+                                  src={getAttachmentUrl(childQuestion.attachment.id)}
+                                  alt={childQuestion.attachment.fileName}
+                                  className="max-w-full h-auto rounded border border-slate-200"
+                                  style={{ maxHeight: '300px' }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Child SingleSelect */}
+                            {childQuestion.type === 'SingleSelect' && (
+                              <RadioGroup
+                                value={answers[childQuestion.id]}
+                                onValueChange={(value) => handleAnswerChange(childQuestion.id, value)}
+                              >
+                                {childQuestion.options.map((childOption) => (
+                                  <div key={childOption.id} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={childOption.id} id={childOption.id} />
+                                    <Label htmlFor={childOption.id} className="cursor-pointer">
+                                      {childOption.text}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </RadioGroup>
+                            )}
+
+                            {/* Child MultiSelect */}
+                            {childQuestion.type === 'MultiSelect' && (
+                              <div className="space-y-3">
+                                {childQuestion.options.map((childOption) => (
+                                  <div key={childOption.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={childOption.id}
+                                      checked={answers[childQuestion.id]?.includes(childOption.id) || false}
+                                      onCheckedChange={(checked) => {
+                                        const newValue = answers[childQuestion.id] ? [...answers[childQuestion.id]] : [];
+                                        if (checked) {
+                                          newValue.push(childOption.id);
+                                        } else {
+                                          const index = newValue.indexOf(childOption.id);
+                                          if (index > -1) newValue.splice(index, 1);
+                                        }
+                                        handleAnswerChange(childQuestion.id, newValue);
+                                      }}
+                                    />
+                                    <Label htmlFor={childOption.id} className="cursor-pointer">
+                                      {childOption.text}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Child OpenText */}
+                            {childQuestion.type === 'OpenText' && (
+                              <div className="space-y-2">
+                                <Textarea
+                                  value={answers[childQuestion.id] || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value.length <= MAX_TEXT_ANSWER_LENGTH) {
+                                      handleAnswerChange(childQuestion.id, value);
+                                    }
+                                  }}
+                                  placeholder="Cevabınızı buraya yazın..."
+                                  rows={4}
+                                  maxLength={MAX_TEXT_ANSWER_LENGTH}
+                                />
+                                <div className="flex justify-end text-sm text-slate-600">
+                                  <span>{answers[childQuestion.id]?.length || 0} / {MAX_TEXT_ANSWER_LENGTH}</span>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
