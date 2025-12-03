@@ -11,6 +11,15 @@ import { Textarea } from '@/src/components/ui/textarea';
 import { QuestionFormData, ChildQuestionFormData, OptionFormData } from '../types';
 import { QuestionType } from '@/src/types';
 import { Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { AttachmentUpload } from '../../components/AttachmentUpload';
+
+const AVAILABLE_CONTENT_TYPES = [
+  { value: 'image/png', label: 'PNG Images' },
+  { value: 'image/jpeg', label: 'JPEG Images' },
+  { value: 'image/jpg', label: 'JPG Images' },
+  { value: 'image/webp', label: 'WebP Images' },
+  { value: 'application/pdf', label: 'PDF Documents' },
+];
 
 interface ConditionalEditorProps {
   question: QuestionFormData;
@@ -139,8 +148,49 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
       .sort((a, b) => a.order - b.order);
   };
 
-  // Question types available for child questions (exclude Conditional)
-  const childQuestionTypes: QuestionType[] = ['SingleSelect', 'MultiSelect', 'OpenText'];
+  const reorderChildQuestion = (parentOptionOrder: number, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const childQuestions = question.childQuestions || [];
+    const optionChildren = getChildrenForOption(parentOptionOrder);
+
+    // Get the child being moved
+    const movedChild = optionChildren[fromIndex];
+
+    // Create a new ordered array for this option's children
+    const reordered = [...optionChildren];
+    reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, movedChild);
+
+    // Update order values
+    reordered.forEach((child, idx) => {
+      child.order = idx + 1;
+    });
+
+    // Rebuild the full childQuestions array with updated orders
+    const otherChildren = childQuestions.filter(cq => cq.parentOptionOrder !== parentOptionOrder);
+    const newChildQuestions = [...otherChildren, ...reordered];
+
+    onChange({ ...question, childQuestions: newChildQuestions });
+  };
+
+  const toggleChildQuestionContentType = (parentOptionOrder: number, childIndex: number, contentType: string) => {
+    const childQuestions = question.childQuestions || [];
+    const optionChildren = childQuestions.filter(cq => cq.parentOptionOrder === parentOptionOrder);
+    const child = optionChildren[childIndex];
+
+    const current = child.allowedAttachmentContentTypes || [];
+    const updated = current.includes(contentType)
+      ? current.filter((t) => t !== contentType)
+      : [...current, contentType];
+
+    updateChildQuestion(parentOptionOrder, childIndex, {
+      allowedAttachmentContentTypes: updated.length > 0 ? updated : undefined,
+    });
+  };
+
+  // Question types available for child questions (exclude Conditional to prevent nesting)
+  const childQuestionTypes: QuestionType[] = ['SingleSelect', 'MultiSelect', 'OpenText', 'FileUpload'];
 
   return (
     <div className="space-y-6">
@@ -218,7 +268,24 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                               <div className="flex-1 space-y-3">
                                 {/* Child Question Text */}
                                 <div>
-                                  <Label>Alt Soru {childIdx + 1}</Label>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Label className="flex-1">Alt Soru {childIdx + 1}</Label>
+                                    <Select
+                                      value={String(childIdx + 1)}
+                                      onValueChange={(value) => reorderChildQuestion(option.order, childIdx, parseInt(value) - 1)}
+                                    >
+                                      <SelectTrigger className="w-20 h-8 text-sm bg-white">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-white z-50">
+                                        {Array.from({ length: children.length }, (_, i) => (
+                                          <SelectItem key={i} value={String(i + 1)}>
+                                            {i + 1}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                   <Input
                                     value={child.text}
                                     onChange={(e) => updateChildQuestion(option.order, childIdx, { text: e.target.value })}
@@ -242,7 +309,8 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                                           <SelectItem key={type} value={type}>
                                             {type === 'SingleSelect' ? 'Tek Seçim' :
                                              type === 'MultiSelect' ? 'Çoklu Seçim' :
-                                             'Açık Uçlu'}
+                                             type === 'OpenText' ? 'Açık Uçlu' :
+                                             'Dosya Yükleme'}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -263,26 +331,83 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                                   </div>
                                 </div>
 
+                                {/* Child Question Attachment */}
+                                <div>
+                                  <Label className="text-sm font-semibold text-slate-700">Soru Eki (Opsiyonel)</Label>
+                                  <AttachmentUpload
+                                    attachment={child.attachment}
+                                    onChange={(attachment) => updateChildQuestion(option.order, childIdx, { attachment })}
+                                    label="Dosya Ekle"
+                                  />
+                                </div>
+
+                                {/* File Type Selector (for FileUpload) */}
+                                {child.type === 'FileUpload' && (
+                                  <div className="border-t pt-3">
+                                    <Label className="mb-2 block text-sm font-semibold">
+                                      İzin Verilen Dosya Tipleri
+                                      <span className="text-xs text-slate-500 font-normal ml-2">(Boş bırakılırsa tüm tipler kabul edilir)</span>
+                                    </Label>
+                                    <div className="space-y-2">
+                                      {AVAILABLE_CONTENT_TYPES.map((type) => {
+                                        const allowedTypes = child.allowedAttachmentContentTypes || [];
+                                        return (
+                                          <div key={type.value} className="flex items-center gap-2">
+                                            <Checkbox
+                                              checked={allowedTypes.includes(type.value)}
+                                              onCheckedChange={() => toggleChildQuestionContentType(option.order, childIdx, type.value)}
+                                            />
+                                            <Label className="cursor-pointer text-sm font-normal">{type.label}</Label>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {child.allowedAttachmentContentTypes && child.allowedAttachmentContentTypes.length > 0 && (
+                                      <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs" style={{ color: '#0055a5' }}>
+                                        <strong>Seçili tipler:</strong> {child.allowedAttachmentContentTypes.join(', ')}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* Child Question Options (for SingleSelect/MultiSelect) */}
                                 {(child.type === 'SingleSelect' || child.type === 'MultiSelect') && (
                                   <div className="space-y-2">
                                     <Label className="text-sm">Seçenekler</Label>
                                     {child.options.map((opt, optIdx) => (
-                                      <div key={optIdx} className="flex gap-2">
-                                        <Input
-                                          value={opt.text}
-                                          onChange={(e) => updateChildOption(option.order, childIdx, optIdx, e.target.value)}
-                                          placeholder={`Seçenek ${optIdx + 1}`}
-                                          className="flex-1"
-                                        />
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeChildOption(option.order, childIdx, optIdx)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                      <div key={optIdx} className="p-2 border rounded bg-white space-y-2">
+                                        <div className="flex gap-2">
+                                          <Input
+                                            value={opt.text}
+                                            onChange={(e) => updateChildOption(option.order, childIdx, optIdx, e.target.value)}
+                                            placeholder={`Seçenek ${optIdx + 1}`}
+                                            className="flex-1"
+                                          />
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeChildOption(option.order, childIdx, optIdx)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                        {/* Option attachment */}
+                                        <div className="pl-2">
+                                          <AttachmentUpload
+                                            attachment={opt.attachment}
+                                            onChange={(attachment) => {
+                                              const childQuestions = question.childQuestions || [];
+                                              const optionChildren = childQuestions.filter(cq => cq.parentOptionOrder === option.order);
+                                              const childToUpdate = optionChildren[childIdx];
+                                              const newOptions = [...childToUpdate.options];
+                                              newOptions[optIdx] = { ...newOptions[optIdx], attachment };
+                                              updateChildQuestion(option.order, childIdx, { options: newOptions });
+                                            }}
+                                            label="Ek Ekle"
+                                          />
+                                        </div>
                                       </div>
                                     ))}
                                     <Button
