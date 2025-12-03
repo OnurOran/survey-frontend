@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -14,20 +14,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 export default function LoginPage() {
   const { login, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Redirect to admin if already authenticated
+  // Redirect after authentication
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
       // Small delay to ensure state is fully propagated
       const timer = setTimeout(() => {
-        router.push('/admin');
+        // Redirect to returnUrl if provided, otherwise to admin
+        router.push(returnUrl || '/admin');
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, returnUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

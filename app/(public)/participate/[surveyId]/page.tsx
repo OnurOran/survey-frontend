@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSurvey } from '@/src/features/survey/hooks';
 import { useStartParticipation, useSubmitAnswer, useCompleteParticipation } from '@/src/features/participation/hooks';
+import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Label } from '@/src/components/ui/label';
@@ -16,9 +17,12 @@ import type { QuestionDto } from '@/src/types';
 // Character limit for open text answers
 const MAX_TEXT_ANSWER_LENGTH = 2000;
 
+// API URL for attachments
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
+
 // Helper function to get attachment URL
 const getAttachmentUrl = (attachmentId: string) => {
-  return `${process.env.NEXT_PUBLIC_API_URL}/Attachments/${attachmentId}`;
+  return `${API_URL}/Attachments/${attachmentId}`;
 };
 
 /**
@@ -29,6 +33,7 @@ export default function ParticipatePage() {
   const params = useParams();
   const router = useRouter();
   const surveyId = params.surveyId as string;
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { data: survey, isLoading, error } = useSurvey(surveyId);
   const startParticipation = useStartParticipation();
@@ -73,6 +78,12 @@ export default function ParticipatePage() {
       return;
     }
 
+    // FileUpload questions ALWAYS require an attachment
+    if (currentQuestion.type === 'FileUpload' && !answer) {
+      alert('Lütfen bir dosya yükleyin.');
+      return;
+    }
+
     // For Conditional questions, validate child questions
     if (currentQuestion.type === 'Conditional' && answer) {
       const selectedOption = currentQuestion.options.find(opt => opt.id === answer);
@@ -90,6 +101,7 @@ export default function ParticipatePage() {
     // Prepare answer based on question type
     let textValue = null;
     let optionIds: string[] = [];
+    let attachment = null;
 
     if (currentQuestion.type === 'OpenText') {
       textValue = answer || null;
@@ -97,10 +109,26 @@ export default function ParticipatePage() {
       optionIds = answer ? [answer] : [];
     } else if (currentQuestion.type === 'MultiSelect') {
       optionIds = answer || [];
+    } else if (currentQuestion.type === 'FileUpload') {
+      attachment = answer ? {
+        fileName: answer.fileName,
+        contentType: answer.contentType,
+        base64Content: answer.base64Content,
+      } : null;
     }
 
     // Submit answers
     try {
+      console.log('Submitting answer:', {
+        questionType: currentQuestion.type,
+        hasAttachment: !!attachment,
+        attachment: attachment ? {
+          fileName: attachment.fileName,
+          contentType: attachment.contentType,
+          base64Length: attachment.base64Content?.length
+        } : null
+      });
+
       // Submit parent question answer
       await submitAnswer.mutateAsync({
         participationId,
@@ -108,6 +136,7 @@ export default function ParticipatePage() {
           questionId: currentQuestion.id,
           textValue,
           optionIds,
+          attachment,
         },
       });
 
@@ -120,6 +149,7 @@ export default function ParticipatePage() {
             if (childAnswer) {
               let childTextValue = null;
               let childOptionIds: string[] = [];
+              let childAttachment = null;
 
               if (childQuestion.type === 'OpenText') {
                 childTextValue = childAnswer;
@@ -127,6 +157,12 @@ export default function ParticipatePage() {
                 childOptionIds = [childAnswer];
               } else if (childQuestion.type === 'MultiSelect') {
                 childOptionIds = childAnswer;
+              } else if (childQuestion.type === 'FileUpload') {
+                childAttachment = {
+                  fileName: childAnswer.fileName,
+                  contentType: childAnswer.contentType,
+                  base64Content: childAnswer.base64Content,
+                };
               }
 
               await submitAnswer.mutateAsync({
@@ -135,6 +171,7 @@ export default function ParticipatePage() {
                   questionId: childQuestion.id,
                   textValue: childTextValue,
                   optionIds: childOptionIds,
+                  attachment: childAttachment,
                 },
               });
             }
@@ -177,7 +214,7 @@ export default function ParticipatePage() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-slate-600">Yükleniyor...</div>
@@ -192,6 +229,51 @@ export default function ParticipatePage() {
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <p className="text-red-600">Anket bulunamadı veya yüklenemedi.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Check if internal survey requires authentication
+  if (survey.accessType === 'Internal' && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-center text-2xl">Giriş Gerekli</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+              <p className="text-slate-700">
+                Bu anket yalnızca dahili kullanıcılar için erişilebilir.
+              </p>
+              <p className="text-slate-600 text-sm">
+                Lütfen devam etmek için giriş yapın.
+              </p>
+              <Button
+                onClick={() => router.push(`/login?returnUrl=/participate/${surveyId}`)}
+                style={{ backgroundColor: '#0055a5' }}
+                className="w-full hover:opacity-90"
+              >
+                Giriş Yap
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -560,10 +642,104 @@ export default function ParticipatePage() {
               </div>
             )}
 
-            {/* File Upload - TODO */}
+            {/* File Upload */}
             {currentQuestion.type === 'FileUpload' && (
-              <div className="text-slate-500">
-                <p>Dosya yükleme özelliği yakında eklenecek.</p>
+              <div className="space-y-3">
+                {currentQuestion.allowedAttachmentContentTypes && currentQuestion.allowedAttachmentContentTypes.length > 0 && (
+                  <div className="text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="font-medium">İzin verilen dosya türleri:</span>
+                    <div className="mt-1">
+                      {currentQuestion.allowedAttachmentContentTypes.map((type, idx) => (
+                        <span key={type} className="text-xs">
+                          {type.split('/')[1].toUpperCase()}
+                          {idx < currentQuestion.allowedAttachmentContentTypes!.length - 1 && ', '}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50">
+                  <input
+                    type="file"
+                    id={`file-upload-${currentQuestion.id}`}
+                    accept={currentQuestion.allowedAttachmentContentTypes?.join(',')}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Check file size (5MB limit)
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('Dosya boyutu 5MB\'dan büyük olamaz.');
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // Convert file to base64
+                        try {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            const base64 = (reader.result as string).split(',')[1]; // Remove data:image/jpeg;base64, prefix
+                            handleAnswerChange(currentQuestion.id, {
+                              fileName: file.name,
+                              contentType: file.type,
+                              base64Content: base64,
+                            });
+                          };
+                          reader.onerror = () => {
+                            alert('Dosya okunurken bir hata oluştu. Lütfen tekrar deneyin.');
+                            e.target.value = '';
+                          };
+                          reader.readAsDataURL(file);
+                        } catch (error) {
+                          alert('Dosya işlenirken bir hata oluştu. Lütfen tekrar deneyin.');
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`file-upload-${currentQuestion.id}`}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col items-center">
+                      <svg
+                        className="w-12 h-12 text-slate-400 mb-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      {answers[currentQuestion.id] ? (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-green-600">
+                            ✓ Dosya yüklendi
+                          </p>
+                          <p className="text-xs text-slate-600">
+                            {answers[currentQuestion.id].fileName}
+                          </p>
+                          <p className="text-xs text-blue-600 hover:text-blue-700">
+                            Farklı bir dosya seçmek için tıklayın
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-slate-700">
+                            Dosya seçmek için tıklayın
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Maksimum dosya boyutu: 5 MB
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
               </div>
             )}
 

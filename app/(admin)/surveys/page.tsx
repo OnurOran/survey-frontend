@@ -203,12 +203,12 @@ export default function SurveysPage() {
                           </span>
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              survey.accessType === 0
+                              survey.accessType === 'Internal'
                                 ? 'bg-purple-100 text-purple-700'
                                 : 'bg-orange-100 text-orange-700'
                             }`}
                           >
-                            {survey.accessType === 0 ? 'Dahili' : 'Halka Açık'}
+                            {survey.accessType === 'Internal' ? 'Dahili' : 'Halka Açık'}
                           </span>
                         </div>
                         <p className="text-sm text-slate-600">

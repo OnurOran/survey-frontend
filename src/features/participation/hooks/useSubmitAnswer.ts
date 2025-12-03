@@ -19,6 +19,11 @@ export function useSubmitAnswer() {
         QuestionId: answer.questionId,
         TextValue: answer.textValue || null,
         OptionIds: answer.optionIds || [],
+        Attachment: answer.attachment ? {
+          FileName: answer.attachment.fileName,
+          ContentType: answer.attachment.contentType,
+          Base64Content: answer.attachment.base64Content,
+        } : null,
       };
       await apiClient.post(`/participations/${participationId}/answers`, request);
     },

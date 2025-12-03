@@ -133,8 +133,9 @@ apiClient.interceptors.response.use(
 
     try {
       // Attempt to refresh the token
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
       const response = await axios.post<AuthTokensDto>(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+        `${apiUrl}/auth/refresh`,
         { refreshToken } as RefreshTokenRequest,
         {
           headers: {

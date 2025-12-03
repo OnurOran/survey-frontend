@@ -14,9 +14,12 @@ import { Textarea } from '@/src/components/ui/textarea';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import type { QuestionType, CreateQuestionDto, CreateOptionDto } from '@/src/types';
 
+// API URL for attachments
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
+
 // Helper function to get attachment URL
 const getAttachmentUrl = (attachmentId: string) => {
-  return `${process.env.NEXT_PUBLIC_API_URL}/Attachments/${attachmentId}`;
+  return `${API_URL}/Attachments/${attachmentId}`;
 };
 
 /**

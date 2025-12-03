@@ -21,7 +21,7 @@ export default function RoleManagementPage() {
 
   // Only fetch all departments if user is Super Admin
   // Managers don't have permission for this endpoint
-  const { data: departments, isLoading: loadingDepartments } = useDepartments();
+  const { data: departments, isLoading: loadingDepartments } = useDepartments(user?.isSuperAdmin ?? false);
   const { data: roles, isLoading: loadingRoles } = useRoles();
   const assignRole = useAssignRole();
   const removeRole = useRemoveRole();
@@ -120,7 +120,9 @@ export default function RoleManagementPage() {
                 </div>
               ) : users && users.length > 0 ? (
                 <div className="space-y-3">
-                  {users.map((user) => (
+                  {users
+                    .filter((u) => u.id !== user?.userId) // Hide current user from the list
+                    .map((user) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50"
@@ -136,13 +138,14 @@ export default function RoleManagementPage() {
                           {user.roles && user.roles.length > 0 ? (
                             user.roles.map((roleName) => {
                               const roleObj = roles?.find((r) => r.name === roleName);
+                              const isAdminRole = roleName.toLowerCase() === 'admin';
                               return (
                                 <div
                                   key={roleName}
                                   className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm"
                                 >
                                   <span>{roleName}</span>
-                                  {roleObj && (
+                                  {roleObj && !isAdminRole && (
                                     <button
                                       onClick={() => handleRemoveRole(user.id, roleObj.id)}
                                       disabled={removeRole.isPending}
@@ -163,6 +166,11 @@ export default function RoleManagementPage() {
                                         />
                                       </svg>
                                     </button>
+                                  )}
+                                  {isAdminRole && (
+                                    <span className="text-xs text-blue-500" title="Admin rolü kaldırılamaz">
+                                      🔒
+                                    </span>
                                   )}
                                 </div>
                               );
@@ -185,7 +193,10 @@ export default function RoleManagementPage() {
                         >
                           <option value="">+ Rol Ekle</option>
                           {roles
-                            ?.filter((role) => !user.roles?.includes(role.name))
+                            ?.filter((role) =>
+                              !user.roles?.includes(role.name) &&
+                              role.name.toLowerCase() !== 'admin'
+                            )
                             .map((role) => (
                               <option key={role.id} value={role.id}>
                                 {role.name}

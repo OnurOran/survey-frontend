@@ -5,8 +5,9 @@ import { logError } from '@/src/lib/errors';
 
 /**
  * Hook to fetch all departments
+ * @param enabled - Whether to enable the query (default: true)
  */
-export function useDepartments() {
+export function useDepartments(enabled: boolean = true) {
   return useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
@@ -19,5 +20,6 @@ export function useDepartments() {
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled, // Only run query if enabled is true
   });
 }

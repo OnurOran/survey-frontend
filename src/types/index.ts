@@ -183,6 +183,7 @@ export interface SubmitAnswerRequest {
   questionId: string;
   textValue?: string | null;
   optionIds: string[];
+  attachment?: AttachmentDto | null;
 }
 
 // Response is just a string (participationId)
