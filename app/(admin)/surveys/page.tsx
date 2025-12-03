@@ -225,12 +225,21 @@ export default function SurveysPage() {
                             Yayınla
                           </Button>
                         )}
+                        {isDraft && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/surveys/${survey.id}/edit`)}
+                          >
+                            Düzenle
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/surveys/${survey.id}`)}
                         >
-                          Görüntüle
+                          Ön İzleme
                         </Button>
                       </div>
                     </div>

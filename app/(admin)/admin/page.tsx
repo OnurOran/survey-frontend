@@ -13,7 +13,7 @@ import { isSuperAdmin } from '@/src/lib/permissions';
  * For Super Admin only
  */
 export default function AdminDashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const isAdmin = user ? isSuperAdmin(user) : false;
 
@@ -44,13 +44,6 @@ export default function AdminDashboardPage() {
                 : `Departman özetiniz hazır, ${user?.username || 'Kullanıcı'}.`}
             </p>
           </div>
-          <Button
-            onClick={logout}
-            variant="outline"
-            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
-          >
-            Çıkış Yap
-          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -146,7 +139,7 @@ export default function AdminDashboardPage() {
                 style={{ backgroundColor: '#0055a5' }}
                 onClick={() => router.push('/surveys')}
               >
-                Anketleri Görüntüle
+                Anketleri Ön İzle
               </Button>
             </CardContent>
           </Card>

@@ -14,7 +14,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user && isSuperAdmin(user);
 
   return (
@@ -90,6 +90,18 @@ export default function AdminLayout({
               Raporlar
             </a>
           )}
+
+          {/* Logout */}
+          <button
+            onClick={logout}
+            className="w-full flex items-center px-4 py-3 text-slate-700 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors font-medium mt-4 border-t border-slate-200 pt-4"
+            type="button"
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+            </svg>
+            Çıkış Yap
+          </button>
         </nav>
       </aside>
 
