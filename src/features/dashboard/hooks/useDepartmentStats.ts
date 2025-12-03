@@ -14,7 +14,7 @@ interface DepartmentStatsResponse {
  * Auto-resolves to authenticated user's department from JWT
  * For Managers only
  */
-export function useDepartmentStats() {
+export function useDepartmentStats(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['dashboard', 'department'],
     queryFn: async () => {
@@ -22,5 +22,6 @@ export function useDepartmentStats() {
       return response.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: options?.enabled ?? true,
   });
 }

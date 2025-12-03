@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
-import { useGlobalStats } from '@/src/features/dashboard/hooks';
+import { useGlobalStats, useDepartmentStats } from '@/src/features/dashboard/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { isSuperAdmin } from '@/src/lib/permissions';
 
 /**
  * Admin Dashboard - Metro Istanbul
@@ -14,16 +15,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 export default function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const { data: stats, isLoading } = useGlobalStats();
+  const isAdmin = user ? isSuperAdmin(user) : false;
+
+  const {
+    data: globalStats,
+    isLoading: globalLoading,
+  } = useGlobalStats({ enabled: isAdmin });
+
+  const {
+    data: departmentStats,
+    isLoading: departmentLoading,
+  } = useDepartmentStats({ enabled: !isAdmin });
+
+  const stats = isAdmin ? globalStats : departmentStats;
+  const isLoading = isAdmin ? globalLoading : departmentLoading;
 
   return (
     <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Yönetim Paneli</h1>
+            <h1 className="text-3xl font-bold text-slate-800">
+              {isAdmin ? 'Yönetim Paneli' : 'Departman Paneli'}
+            </h1>
             <p className="text-slate-600 mt-1">
-              Hoş geldiniz, {user?.username || 'Admin'}!
+              {isAdmin
+                ? `Hoş geldiniz, ${user?.username || 'Admin'}!`
+                : `Departman özetiniz hazır, ${user?.username || 'Kullanıcı'}.`}
             </p>
           </div>
           <Button
@@ -41,12 +59,14 @@ export default function AdminDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Toplam Anket</p>
-                  {isLoading ? (
-                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
-                  ) : (
-                    <p className="text-3xl font-bold text-slate-800 mt-2">{stats?.totalSurveys ?? 0}</p>
-                  )}
+                <p className="text-sm font-medium text-slate-600">
+                  {isAdmin ? 'Toplam Anket' : 'Departman Anketleri'}
+                </p>
+                {isLoading ? (
+                  <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                ) : (
+                  <p className="text-3xl font-bold text-slate-800 mt-2">{stats?.totalSurveys ?? 0}</p>
+                )}
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,12 +81,14 @@ export default function AdminDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Aktif Anket</p>
-                  {isLoading ? (
-                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
-                  ) : (
-                    <p className="text-3xl font-bold text-green-700 mt-2">{stats?.activeSurveys ?? 0}</p>
-                  )}
+                <p className="text-sm font-medium text-slate-600">
+                  {isAdmin ? 'Aktif Anket' : 'Aktif Departman Anketleri'}
+                </p>
+                {isLoading ? (
+                  <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                ) : (
+                  <p className="text-3xl font-bold text-green-700 mt-2">{stats?.activeSurveys ?? 0}</p>
+                )}
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,12 +103,14 @@ export default function AdminDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Toplam Katılım</p>
-                  {isLoading ? (
-                    <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
-                  ) : (
-                    <p className="text-3xl font-bold text-purple-700 mt-2">{stats?.totalParticipations ?? 0}</p>
-                  )}
+                <p className="text-sm font-medium text-slate-600">
+                  {isAdmin ? 'Toplam Katılım' : 'Departman Katılımları'}
+                </p>
+                {isLoading ? (
+                  <p className="text-3xl font-bold text-slate-400 mt-2">...</p>
+                ) : (
+                  <p className="text-3xl font-bold text-purple-700 mt-2">{stats?.totalParticipations ?? 0}</p>
+                )}
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,12 +137,14 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600 mb-4">
-                Anketleri oluşturun, düzenleyin ve yayınlayın
+                {isAdmin
+                  ? 'Anketleri oluşturun, düzenleyin ve yayınlayın'
+                  : 'Departman anketlerinizi yönetin'}
               </p>
               <Button
                 className="w-full"
                 style={{ backgroundColor: '#0055a5' }}
-                onClick={() => router.push('/admin/surveys')}
+                onClick={() => router.push('/surveys')}
               >
                 Anketleri Görüntüle
               </Button>
@@ -133,18 +159,19 @@ export default function AdminDashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 </div>
-                <CardTitle className="text-slate-800">Kullanıcılar</CardTitle>
+                <CardTitle className="text-slate-800">Rol Yönetimi</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600 mb-4">
-                Kullanıcıları ve rollerini yönetin
+                Kullanıcı rolleri ve yetkilerini yönetin
               </p>
               <Button
                 className="w-full"
                 style={{ backgroundColor: '#0055a5' }}
+                onClick={() => router.push('/admin/role-management')}
               >
-                Kullanıcıları Yönet
+                Rol Yönetimine Git
               </Button>
             </CardContent>
           </Card>
@@ -157,18 +184,21 @@ export default function AdminDashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <CardTitle className="text-slate-800">Raporlar</CardTitle>
+                <CardTitle className="text-slate-800">{isAdmin ? 'Raporlar' : 'Katılım Özeti'}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600 mb-4">
-                Anket sonuçlarını görüntüleyin ve analiz edin
+                {isAdmin
+                  ? 'Anket sonuçlarını görüntüleyin ve analiz edin'
+                  : 'Departman katılımlarını izleyin'}
               </p>
               <Button
                 className="w-full"
-                style={{ backgroundColor: '#0055a5' }}
+                variant="outline"
+                onClick={() => router.push('/surveys')}
               >
-                Raporları Görüntüle
+                Daha Fazla Gör
               </Button>
             </CardContent>
           </Card>

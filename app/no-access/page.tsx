@@ -29,8 +29,8 @@ export default function NoAccessPage() {
     const hasPermissions = user.isSuperAdmin || (user.permissions && user.permissions.length > 0);
 
     if (hasPermissions) {
-      // User has permissions, redirect to admin
-      router.replace('/admin');
+      // User has permissions, redirect to dashboard
+      router.replace('/dashboard');
     }
   }, [user, isLoading, router]);
 

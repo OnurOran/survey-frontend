@@ -12,7 +12,7 @@ interface GlobalStatsResponse {
  * Hook to fetch global dashboard stats
  * For Super Admin only
  */
-export function useGlobalStats() {
+export function useGlobalStats(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['dashboard', 'global'],
     queryFn: async () => {
@@ -20,5 +20,6 @@ export function useGlobalStats() {
       return response.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: options?.enabled ?? true,
   });
 }

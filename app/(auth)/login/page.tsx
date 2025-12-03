@@ -25,8 +25,8 @@ export default function LoginPage() {
     if (isAuthenticated && !isLoading) {
       // Small delay to ensure state is fully propagated
       const timer = setTimeout(() => {
-        // Redirect to returnUrl if provided, otherwise to admin
-        router.push(returnUrl || '/admin');
+        // Redirect to returnUrl if provided, otherwise to dashboard
+        router.push(returnUrl || '/dashboard');
       }, 100);
       return () => clearTimeout(timer);
     }
