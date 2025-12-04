@@ -32,9 +32,9 @@ export const conditionalConfig: QuestionTypeConfig = {
       errors.push({ field: 'text', message: 'Soru metni gereklidir' });
     }
 
-    // Must have exactly 3 options
-    if (question.options.length !== 3) {
-      errors.push({ field: 'options', message: 'Koşullu sorular tam olarak 3 seçenek içermelidir' });
+    // Must have between 2 and 5 options
+    if (question.options.length < 2 || question.options.length > 5) {
+      errors.push({ field: 'options', message: 'Koşullu sorular 2 ile 5 seçenek arasında olmalıdır' });
     }
 
     question.options.forEach((option, index) => {

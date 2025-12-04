@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
@@ -29,19 +29,33 @@ interface ConditionalEditorProps {
 export function ConditionalEditor({ question, onChange }: ConditionalEditorProps) {
   const [expandedOptions, setExpandedOptions] = useState<Record<number, boolean>>({});
 
-  // Initialize with 3 options if empty
-  if (question.options.length === 0) {
-    question.options = [
-      { text: '', order: 1, value: 1, attachment: null },
-      { text: '', order: 2, value: 2, attachment: null },
-      { text: '', order: 3, value: 3, attachment: null },
-    ];
-  }
+  // Initialize options/childQuestions safely (avoid setState during render)
+  useEffect(() => {
+    const needsOptions = question.options.length < 2;
+    const needsChildren = question.childQuestions === undefined;
 
-  // Initialize childQuestions if not exists
-  if (!question.childQuestions) {
-    question.childQuestions = [];
-  }
+    if (!needsOptions && !needsChildren) {
+      return;
+    }
+
+    const fixedOptions = needsOptions
+      ? [
+          ...(question.options.length > 0
+            ? question.options.map((opt, idx) => ({ ...opt, order: idx + 1, value: idx + 1 }))
+            : []),
+          ...Array.from({ length: 2 - question.options.length }, (_, idx) => {
+            const order = question.options.length + idx + 1;
+            return { text: '', order, value: order, attachment: null };
+          }),
+        ]
+      : question.options;
+
+    onChange({
+      ...question,
+      options: fixedOptions,
+      childQuestions: question.childQuestions ?? [],
+    });
+  }, [onChange, question]);
 
   const handleOptionTextChange = (index: number, text: string) => {
     const newOptions = [...question.options];
@@ -192,6 +206,39 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
   // Question types available for child questions (exclude Conditional to prevent nesting)
   const childQuestionTypes: QuestionType[] = ['SingleSelect', 'MultiSelect', 'OpenText', 'FileUpload'];
 
+  const addParentOption = () => {
+    if (question.options.length >= 5) return;
+    const newOptions = [
+      ...question.options,
+      { text: '', order: question.options.length + 1, value: question.options.length + 1, attachment: null },
+    ];
+    onChange({ ...question, options: newOptions });
+  };
+
+  const removeParentOption = (index: number) => {
+    const optionToRemove = question.options[index];
+    const remainingOptions = question.options.filter((_, i) => i !== index);
+
+    // Remove child questions associated with this option
+    const remainingChildren = (question.childQuestions || []).filter(
+      (cq) => cq.parentOptionOrder !== optionToRemove.order
+    );
+
+    // Re-order options and child parentOptionOrder
+    const reindexedOptions = remainingOptions.map((opt, idx) => ({ ...opt, order: idx + 1, value: idx + 1 }));
+    const reindexedChildren = remainingChildren.map((cq) => {
+      // If parent order was higher than removed, decrement
+      const newOrder = cq.parentOptionOrder > optionToRemove.order ? cq.parentOptionOrder - 1 : cq.parentOptionOrder;
+      return { ...cq, parentOptionOrder: newOrder };
+    });
+
+    onChange({
+      ...question,
+      options: reindexedOptions,
+      childQuestions: reindexedChildren,
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Parent Question */}
@@ -218,9 +265,21 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
         </div>
       </div>
 
-      {/* 3 Fixed Options with Child Questions */}
+      {/* Options with Child Questions */}
       <div className="space-y-4">
-        <Label className="text-lg font-medium">Seçenekler (3 adet - sabit)</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-lg font-medium">Seçenekler (2-5 adet)</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addParentOption}
+            disabled={question.options.length >= 5}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Seçenek Ekle
+          </Button>
+        </div>
 
         {question.options.map((option, index) => {
           const isExpanded = expandedOptions[option.order];
@@ -253,6 +312,17 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                   <div className="text-sm text-slate-500">
                     {children.length} alt soru
                   </div>
+                  {question.options.length > 2 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeParentOption(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
 

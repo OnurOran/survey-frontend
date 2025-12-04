@@ -31,8 +31,8 @@ export const singleSelectConfig: QuestionTypeConfig = {
       errors.push({ field: 'text', message: 'Soru metni gereklidir' });
     }
 
-    if (question.options.length === 0) {
-      errors.push({ field: 'options', message: 'En az bir seçenek gereklidir' });
+    if (question.options.length < 2 || question.options.length > 5) {
+      errors.push({ field: 'options', message: '2 ile 5 arasında seçenek ekleyin' });
     }
 
     question.options.forEach((option, index) => {

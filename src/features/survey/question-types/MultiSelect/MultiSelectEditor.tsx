@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import { Button } from '@/src/components/ui/button';
@@ -19,7 +20,22 @@ export function MultiSelectEditor({
   onRemove,
   onReorder,
 }: QuestionEditorProps) {
+  useEffect(() => {
+    if (question.options.length >= 2) {
+      return;
+    }
+    const padded = [
+      ...question.options.map((opt, idx) => ({ ...opt, order: idx + 1 })),
+      ...Array.from({ length: 2 - question.options.length }, (_, idx) => {
+        const order = question.options.length + idx + 1;
+        return { text: '', order, value: 0, attachment: null };
+      }),
+    ];
+    onChange({ ...question, options: padded });
+  }, [onChange, question]);
+
   const addOption = () => {
+    if (question.options.length >= 5) return;
     onChange({
       ...question,
       options: [
@@ -192,17 +208,18 @@ export function MultiSelectEditor({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeOption(oIndex)}
-                      className="text-red-600 hover:text-white hover:bg-red-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeOption(oIndex)}
+                  className="text-red-600 hover:text-white hover:bg-red-600 disabled:opacity-50"
+                  disabled={question.options.length <= 2}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </Button>
                   </div>
 
                   {/* Option attachment */}
