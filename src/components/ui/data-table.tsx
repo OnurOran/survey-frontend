@@ -36,6 +36,9 @@ type DataTableProps<TData> = {
   toolbarContent?: React.ReactNode;
   pageSizeOptions?: number[];
   emptyMessage?: string;
+  /** Optional external sorting state */
+  sorting?: SortingState;
+  onSortingChange?: (sorting: SortingState) => void;
 };
 
 /**
@@ -50,11 +53,24 @@ export function DataTable<TData>({
   toolbarContent,
   pageSizeOptions = [5, 10, 20, 50],
   emptyMessage = 'Kayıt bulunamadı',
+  sorting,
+  onSortingChange,
 }: DataTableProps<TData>) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [internalSorting, setInternalSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const resolvedSorting = sorting ?? internalSorting;
+
+  const handleSortingChange = (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    const next =
+      typeof updater === 'function'
+        ? (updater as (old: SortingState) => SortingState)(resolvedSorting)
+        : updater;
+    setInternalSorting(next);
+    onSortingChange?.(next);
+  };
 
   // TanStack Table exposes non-memoizable callbacks; ignore analyzer warning for this hook.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -62,11 +78,11 @@ export function DataTable<TData>({
     data,
     columns,
     state: {
-      sorting,
+      sorting: resolvedSorting,
       globalFilter,
       columnFilters,
     },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -126,7 +142,7 @@ export function DataTable<TData>({
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm text-slate-700">
+          <table className="w-full text-left text-sm text-slate-700">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>

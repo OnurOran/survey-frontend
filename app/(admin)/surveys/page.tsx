@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useSurveys, usePublishSurvey } from '@/src/features/survey/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/src/components/ui/dialog';
@@ -48,6 +48,7 @@ export default function SurveysPage() {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const handlePublishClick = (surveyId: string) => {
     setSelectedSurveyId(surveyId);
@@ -129,7 +130,9 @@ export default function SurveysPage() {
       },
       {
         accessorKey: 'startDate',
-        header: 'Başlangıç',
+        header: ({ column }) => {
+          return <span className="text-slate-800 font-semibold">Başlangıç</span>;
+        },
         cell: ({ getValue }) => <span>{formatDate(getValue<string | null>())}</span>,
       },
       {
@@ -194,7 +197,7 @@ export default function SurveysPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="container mx-auto px-6 py-4 max-w-7xl">
+        <div className="container mx-auto px-6 py-4 w-full">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-800">Anketler</h1>
@@ -211,11 +214,13 @@ export default function SurveysPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-6 max-w-7xl">
+      <div className="container mx-auto px-6 py-6 w-full">
         <DataTable
           columns={columns}
           data={surveys ?? []}
           searchKey="title"
+           sorting={sorting}
+           onSortingChange={setSorting}
           filterableColumns={[
             {
               id: 'status',
@@ -234,11 +239,7 @@ export default function SurveysPage() {
               ],
             },
           ]}
-          toolbarContent={
-            <Button onClick={() => router.push('/surveys/new')} style={{ backgroundColor: '#0055a5' }}>
-              + Yeni Anket
-            </Button>
-          }
+          toolbarContent={null}
           emptyMessage="Henüz anket bulunmuyor"
         />
       </div>
