@@ -128,7 +128,7 @@ export interface SurveyListItemDto {
   title: string;
   description: string;
   departmentId: string;
-  accessType: number; // 0 = Internal, 1 = Public
+  accessType: AccessType;
   isActive: boolean;
   createdAt: string;
   startDate: string | null;
