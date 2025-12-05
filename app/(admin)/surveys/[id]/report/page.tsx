@@ -138,7 +138,82 @@ export default function SurveyReportPage() {
     if (!reportRef.current || !report) return;
 
     setExportingPDF(true);
+
+    // Create a temporary style element to override problematic CSS colors
+    const styleOverride = document.createElement('style');
+    styleOverride.id = 'pdf-color-override';
+    styleOverride.textContent = `
+      /* Override all potentially problematic colors with RGB equivalents */
+      * {
+        color: inherit !important;
+        background-color: transparent !important;
+        border-color: rgb(203, 213, 225) !important;
+      }
+      body, .bg-white, [class*="bg-white"] {
+        background-color: rgb(255, 255, 255) !important;
+      }
+      .bg-slate-50, [class*="bg-slate-50"] {
+        background-color: rgb(248, 250, 252) !important;
+      }
+      .bg-slate-100, [class*="bg-slate-100"] {
+        background-color: rgb(241, 245, 249) !important;
+      }
+      .bg-blue-50, [class*="bg-blue-50"] {
+        background-color: rgb(239, 246, 255) !important;
+      }
+      .text-slate-600, [class*="text-slate-600"] {
+        color: rgb(71, 85, 105) !important;
+      }
+      .text-slate-700, [class*="text-slate-700"] {
+        color: rgb(51, 65, 85) !important;
+      }
+      .text-slate-800, [class*="text-slate-800"] {
+        color: rgb(30, 41, 59) !important;
+      }
+      .text-slate-900, [class*="text-slate-900"] {
+        color: rgb(15, 23, 42) !important;
+      }
+      .text-blue-900, [class*="text-blue-900"] {
+        color: rgb(30, 58, 138) !important;
+      }
+      .text-green-600, [class*="text-green-600"] {
+        color: rgb(22, 163, 74) !important;
+      }
+      .text-blue-600, [class*="text-blue-600"] {
+        color: rgb(37, 99, 235) !important;
+      }
+      .border-slate-200, [class*="border-slate-200"] {
+        border-color: rgb(226, 232, 240) !important;
+      }
+      .border-blue-100, [class*="border-blue-100"] {
+        border-color: rgb(219, 234, 254) !important;
+      }
+      .border-blue-200, [class*="border-blue-200"] {
+        border-color: rgb(191, 219, 254) !important;
+      }
+    `;
+
     try {
+      // Wait for all images to load
+      const images = reportRef.current.querySelectorAll('img');
+      const imagePromises = Array.from(images).map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          setTimeout(resolve, 3000);
+        });
+      });
+
+      await Promise.all(imagePromises);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Add the style override
+      document.head.appendChild(styleOverride);
+
+      // Wait for styles to apply
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -154,9 +229,12 @@ export default function SurveyReportPage() {
       pdf.text(subtitle, margin, 28);
 
       const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         logging: false,
+        allowTaint: true,
+        imageTimeout: 0,
+        backgroundColor: '#ffffff',
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -182,8 +260,13 @@ export default function SurveyReportPage() {
       pdf.save(filename);
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('PDF oluşturulurken bir hata oluştu');
+      alert('PDF oluşturulurken bir hata oluştu: ' + (err as Error).message);
     } finally {
+      // Remove the style override
+      const styleEl = document.getElementById('pdf-color-override');
+      if (styleEl) {
+        styleEl.remove();
+      }
       setExportingPDF(false);
     }
   };
@@ -223,11 +306,6 @@ export default function SurveyReportPage() {
               </Button>
               <h1 className="text-3xl font-bold text-slate-800">{report.title}</h1>
               <p className="text-slate-600 mt-1">{report.description}</p>
-              {isIndividualView && (
-                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium">
-                  👤 Bireysel Görünüm: {selectedParticipantName}
-                </div>
-              )}
             </div>
             <Button
               onClick={handleExportPDF}
@@ -243,42 +321,83 @@ export default function SurveyReportPage() {
 
       <div className="container mx-auto px-6 py-6 w-full">
         <div className="space-y-6" ref={reportRef}>
-          {/* Stats Overview - Only show in aggregate view */}
-          {!isIndividualView && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Toplam Katılım</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-slate-900">{report.totalParticipations}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Tamamlanan</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600">{report.completedParticipations}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Tamamlanma Oranı</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-blue-600">{report.completionRate.toFixed(1)}%</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Soru Sayısı</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-slate-900">{report.questions.length}</div>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Toplam Katılım</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-slate-900">{report.totalParticipations}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Tamamlanan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">{report.completedParticipations}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Tamamlanma Oranı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">{report.completionRate.toFixed(1)}%</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Soru Sayısı</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-slate-900">{report.questions.length}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Survey Info - Intro/Outro/Attachment */}
+          {(report.introText || report.outroText || report.attachment) && (
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle>Anket Bilgileri</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {report.introText && (
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700 mb-1">Giriş Metni</div>
+                    <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-3 rounded">
+                      {report.introText}
+                    </div>
+                  </div>
+                )}
+                {report.outroText && (
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700 mb-1">Bitiş Metni</div>
+                    <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 p-3 rounded">
+                      {report.outroText}
+                    </div>
+                  </div>
+                )}
+                {report.attachment && (
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700 mb-2">📎 Anket Eki</div>
+                    {report.attachment.contentType.startsWith('image/') ? (
+                      <QuestionAttachmentImage
+                        attachmentId={report.attachment.id}
+                        fileName={report.attachment.fileName}
+                        className="max-w-md max-h-64 rounded border border-slate-300 object-contain"
+                      />
+                    ) : (
+                      <div className="text-sm text-slate-700 bg-slate-50 p-3 rounded">
+                        {report.attachment.fileName} ({(report.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* Participant Selector - Only for Internal surveys */}
@@ -361,20 +480,16 @@ export default function SurveyReportPage() {
             </Card>
           )}
 
-          {/* Individual View */}
-          {isIndividualView ? (
-            <IndividualResponseView response={participantResponse!} onFileDownload={handleFileDownload} />
-          ) : (
-            /* Aggregate View - Questions */
-            report.questions.map((question, index) => (
-              <QuestionResultCard
-                key={question.questionId}
-                question={question}
-                index={index}
-                onFileDownload={handleFileDownload}
-              />
-            ))
-          )}
+          {/* Questions with optional individual answers */}
+          {report.questions.map((question, index) => (
+            <QuestionResultCard
+              key={question.questionId}
+              question={question}
+              index={index}
+              onFileDownload={handleFileDownload}
+              participantResponse={isIndividualView ? participantResponse : undefined}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -441,26 +556,56 @@ function IndividualResponseView({
 function QuestionResultCard({
   question,
   index,
-  onFileDownload
+  onFileDownload,
+  participantResponse
 }: {
   question: QuestionReportDto;
   index: number;
   onFileDownload: (attachmentId: string, fileName: string) => void;
+  participantResponse?: ParticipantResponseDto;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Find this participant's answer for this question
+  const participantAnswer = participantResponse?.answers.find(a => a.questionId === question.questionId);
+
+  // Debug logging
+  if (participantResponse && participantAnswer) {
+    console.log('Question:', question.questionId, question.text);
+    console.log('Participant Answer:', participantAnswer);
+    console.log('Has fileName:', !!participantAnswer.fileName);
+    console.log('Has answerId:', !!participantAnswer.answerId);
+    console.log('Has textValue:', !!participantAnswer.textValue);
+    console.log('selectedOptions length:', participantAnswer.selectedOptions?.length);
+  }
+
   const renderQuestionContent = () => {
+    // If participant is selected, don't show aggregate views (they'll see their answer in the blue box below)
+    if (participantResponse) {
+      return null;
+    }
+
     switch (question.type) {
       case 'SingleSelect':
       case 'MultiSelect':
         return <BarChartView data={question.optionResults || []} type={question.type} />;
 
       case 'OpenText':
-        return <OpenTextView responses={question.textResponses || []} currentPage={currentPage} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />;
+        return <OpenTextView
+          responses={question.textResponses || []}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          selectedParticipantName={participantResponse?.participantName || undefined}
+        />;
 
       case 'FileUpload':
-        return <FileUploadView responses={question.fileResponses || []} onFileDownload={onFileDownload} />;
+        return <FileUploadView
+          responses={question.fileResponses || []}
+          onFileDownload={onFileDownload}
+          selectedParticipantName={participantResponse?.participantName || undefined}
+        />;
 
       case 'Conditional':
         return <ConditionalView question={question} onFileDownload={onFileDownload} />;
@@ -504,7 +649,59 @@ function QuestionResultCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent>{renderQuestionContent()}</CardContent>
+      <CardContent>
+        {renderQuestionContent()}
+
+        {/* Individual Participant Answer */}
+        {participantAnswer && (
+          <div className="mt-6 pt-4 border-t-2 border-blue-200">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="text-sm font-bold text-blue-900">
+                  👤 {participantResponse?.participantName || 'Seçili Katılımcı'} - Yanıt
+                </div>
+              </div>
+              <div className="text-sm text-slate-800">
+                {participantAnswer.textValue && (
+                  <div className="whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
+                    {participantAnswer.textValue}
+                  </div>
+                )}
+                {participantAnswer.selectedOptions && participantAnswer.selectedOptions.length > 0 && (
+                  <ul className="list-disc list-inside space-y-1 bg-white p-3 rounded border border-blue-100">
+                    {participantAnswer.selectedOptions.map((opt, i) => (
+                      <li key={i} className="text-slate-700">{opt}</li>
+                    ))}
+                  </ul>
+                )}
+                {participantAnswer.fileName && (
+                  <div className="bg-white p-3 rounded border border-blue-100">
+                    {participantAnswer.answerId ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onFileDownload(participantAnswer.answerId!, participantAnswer.fileName!)}
+                        className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+                      >
+                        📎 {participantAnswer.fileName}
+                      </Button>
+                    ) : (
+                      <div className="text-sm text-slate-600">
+                        📎 {participantAnswer.fileName}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!participantAnswer.textValue &&
+                 (!participantAnswer.selectedOptions || participantAnswer.selectedOptions.length === 0) &&
+                 !participantAnswer.fileName && (
+                  <span className="text-slate-500 italic">Yanıt verilmedi</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }
@@ -536,14 +733,33 @@ function BarChartView({ data, type }: { data: OptionResultDto[]; type: string })
 
       <div className="grid grid-cols-1 gap-2">
         {data.map((opt, idx) => (
-          <div key={opt.optionId} className="flex items-center justify-between p-3 bg-slate-50 rounded-md">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-              <span className="text-sm font-medium">{opt.text}</span>
+          <div key={opt.optionId} className="p-3 bg-slate-50 rounded-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                <span className="text-sm font-medium">{opt.text}</span>
+              </div>
+              <div className="text-sm text-slate-600">
+                {opt.selectionCount} ({opt.percentage.toFixed(1)}%)
+              </div>
             </div>
-            <div className="text-sm text-slate-600">
-              {opt.selectionCount} ({opt.percentage.toFixed(1)}%)
-            </div>
+            {/* Option Attachment Display */}
+            {opt.attachment && (
+              <div className="mt-2 ml-7 p-2 bg-white rounded border border-slate-200">
+                <div className="text-xs text-slate-600 mb-1">📎 Seçenek Eki</div>
+                {opt.attachment.contentType.startsWith('image/') ? (
+                  <QuestionAttachmentImage
+                    attachmentId={opt.attachment.id}
+                    fileName={opt.attachment.fileName}
+                    className="max-w-xs max-h-32 rounded object-contain"
+                  />
+                ) : (
+                  <div className="text-xs text-slate-700">
+                    {opt.attachment.fileName} ({(opt.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -557,19 +773,28 @@ function OpenTextView({
   currentPage,
   itemsPerPage,
   onPageChange,
+  selectedParticipantName,
 }: {
   responses: any[];
   currentPage: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  selectedParticipantName?: string;
 }) {
-  const totalPages = Math.ceil(responses.length / itemsPerPage);
+  // Filter responses if a specific participant is selected
+  const filteredResponses = selectedParticipantName
+    ? responses.filter(r => r.participantName === selectedParticipantName)
+    : responses;
+
+  const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedResponses = responses.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedResponses = filteredResponses.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-slate-600">Toplam {responses.length} yanıt</div>
+      <div className="text-sm text-slate-600">
+        {selectedParticipantName ? `${filteredResponses.length} yanıt` : `Toplam ${filteredResponses.length} yanıt`}
+      </div>
 
       {paginatedResponses.map((response, idx) => (
         <div key={response.participationId + idx} className="p-4 bg-slate-50 rounded-md">
@@ -601,26 +826,24 @@ function OpenTextView({
 // File Upload Responses with preview
 function FileUploadView({
   responses,
-  onFileDownload
+  onFileDownload,
+  selectedParticipantName,
 }: {
   responses: any[];
   onFileDownload: (attachmentId: string, fileName: string) => void;
+  selectedParticipantName?: string;
 }) {
-  const getFilePreview = async (answerId: string) => {
-    try {
-      const response = await apiClient.get(`/participations/answers/${answerId}/attachment`, {
-        responseType: 'blob',
-      });
-      return URL.createObjectURL(response.data);
-    } catch {
-      return null;
-    }
-  };
+  // Filter responses if a specific participant is selected
+  const filteredResponses = selectedParticipantName
+    ? responses.filter(r => r.participantName === selectedParticipantName)
+    : responses;
 
   return (
     <div className="space-y-2">
-      <div className="text-sm text-slate-600 mb-3">Toplam {responses.length} dosya</div>
-      {responses.map((file) => {
+      <div className="text-sm text-slate-600 mb-3">
+        {selectedParticipantName ? `${filteredResponses.length} dosya` : `Toplam ${filteredResponses.length} dosya`}
+      </div>
+      {filteredResponses.map((file) => {
         const isImage = file.contentType.startsWith('image/');
         return (
           <div key={file.answerId} className="p-3 bg-slate-50 rounded-md">
@@ -652,7 +875,7 @@ function FileUploadView({
           </div>
         );
       })}
-      {responses.length === 0 && <div className="text-sm text-slate-500">Dosya yüklenmemiş</div>}
+      {filteredResponses.length === 0 && <div className="text-sm text-slate-500">Dosya yüklenmemiş</div>}
     </div>
   );
 }

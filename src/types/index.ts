@@ -253,6 +253,8 @@ export interface SurveyReportDto {
   surveyId: string;
   title: string;
   description: string;
+  introText?: string | null;
+  outroText?: string | null;
   accessType: AccessType;
   startDate: string | null;
   endDate: string | null;
@@ -262,6 +264,7 @@ export interface SurveyReportDto {
   completionRate: number;
   participants: ParticipantSummaryDto[];
   questions: QuestionReportDto[];
+  attachment?: AttachmentMetadata | null;
 }
 
 export interface ParticipantSummaryDto {
@@ -292,6 +295,7 @@ export interface OptionResultDto {
   order: number;
   selectionCount: number;
   percentage: number;
+  attachment?: AttachmentMetadata | null;
 }
 
 export interface TextResponseDto {
