@@ -1,18 +1,89 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSurveyReport, useParticipantResponse } from '@/src/features/survey/hooks';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/src/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/src/components/ui/popover';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { apiClient } from '@/src/lib/api';
 import type { QuestionReportDto, OptionResultDto, ParticipantResponseDto } from '@/src/types';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
 
 const COLORS = ['#0055a5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+// Authenticated Image Component for Answer Attachments
+function AuthenticatedImage({ attachmentId, fileName, className }: { attachmentId: string; fileName: string; className?: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      try {
+        const response = await apiClient.get(`/attachments/answers/${attachmentId}`, {
+          responseType: 'blob',
+        });
+        const url = URL.createObjectURL(response.data);
+        setImageUrl(url);
+      } catch (err) {
+        console.error('Failed to load image:', err);
+        setError(true);
+      }
+    };
+
+    fetchImage();
+
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [attachmentId]);
+
+  if (error) return null;
+  if (!imageUrl) return <div className="text-sm text-slate-500">Görsel yükleniyor...</div>;
+
+  return <img src={imageUrl} alt={fileName} className={className} />;
+}
+
+// Authenticated Image Component for Question Attachments
+function QuestionAttachmentImage({ attachmentId, fileName, className }: { attachmentId: string; fileName: string; className?: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      try {
+        const response = await apiClient.get(`/attachments/${attachmentId}`, {
+          responseType: 'blob',
+        });
+        const url = URL.createObjectURL(response.data);
+        setImageUrl(url);
+      } catch (err) {
+        console.error('Failed to load question attachment:', err);
+        setError(true);
+      }
+    };
+
+    fetchImage();
+
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [attachmentId]);
+
+  if (error) return null;
+  if (!imageUrl) return <div className="text-sm text-slate-500">Görsel yükleniyor...</div>;
+
+  return <img src={imageUrl} alt={fileName} className={className} />;
+}
 
 export default function SurveyReportPage() {
   const params = useParams();
@@ -25,24 +96,27 @@ export default function SurveyReportPage() {
   const [selectedParticipantName, setSelectedParticipantName] = useState<string>('');
   const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantName);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
-  const handleParticipantSelect = (participationId: string) => {
-    if (participationId === 'all') {
+  const handleParticipantSelect = (participantName: string) => {
+    if (!participantName || participantName === 'all') {
       setSelectedParticipantId('');
       setSelectedParticipantName('');
+      setComboboxOpen(false);
       return;
     }
 
-    setSelectedParticipantId(participationId);
-    const participant = report?.participants.find(p => p.participationId === participationId);
-    if (participant?.participantName) {
-      setSelectedParticipantName(participant.participantName);
+    const participant = report?.participants.find(p => p.participantName === participantName);
+    if (participant) {
+      setSelectedParticipantId(participant.participationId);
+      setSelectedParticipantName(participantName);
     }
+    setComboboxOpen(false);
   };
 
-  const handleFileDownload = async (answerId: string, fileName: string) => {
+  const handleFileDownload = async (attachmentId: string, fileName: string) => {
     try {
-      const response = await apiClient.get(`/participations/answers/${answerId}/attachment`, {
+      const response = await apiClient.get(`/attachments/answers/${attachmentId}`, {
         responseType: 'blob',
       });
 
@@ -209,27 +283,71 @@ export default function SurveyReportPage() {
 
           {/* Participant Selector - Only for Internal surveys */}
           {report.accessType === 'Internal' && report.participants.length > 0 && (
-            <Card>
+            <Card className="bg-white">
               <CardHeader>
                 <CardTitle>Katılımcı Seçimi</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 items-center">
-                  <Select value={selectedParticipantId || 'all'} onValueChange={handleParticipantSelect}>
-                    <SelectTrigger className="w-full md:w-96">
-                      <SelectValue placeholder="Tüm katılımcıları göster" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">📊 Tüm Katılımcılar (Toplu Rapor)</SelectItem>
-                      {report.participants.map((participant) => (
-                        <SelectItem key={participant.participationId} value={participant.participationId}>
-                          👤 {participant.participantName || 'İsimsiz'} {participant.isCompleted ? '✓' : '⏳'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={comboboxOpen}
+                        className="w-full md:w-96 justify-between bg-white"
+                      >
+                        {selectedParticipantName
+                          ? `👤 ${selectedParticipantName}`
+                          : '📊 Tüm Katılımcılar (Toplu Rapor)'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full md:w-96 p-0 bg-white" align="start">
+                      <Command className="bg-white">
+                        <CommandInput placeholder="Katılımcı ara..." className="bg-white" />
+                        <CommandList className="bg-white">
+                          <CommandEmpty>Katılımcı bulunamadı.</CommandEmpty>
+                          <CommandGroup className="bg-white">
+                            <CommandItem
+                              value="all"
+                              onSelect={() => handleParticipantSelect('all')}
+                              className="bg-white hover:bg-slate-100"
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  !selectedParticipantName ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              📊 Tüm Katılımcılar (Toplu Rapor)
+                            </CommandItem>
+                            {report.participants.map((participant) => (
+                              <CommandItem
+                                key={participant.participationId}
+                                value={participant.participantName || ''}
+                                onSelect={handleParticipantSelect}
+                                className="bg-white hover:bg-slate-100"
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    selectedParticipantName === participant.participantName
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                                👤 {participant.participantName || 'İsimsiz'}{' '}
+                                {participant.isCompleted ? '✓' : '⏳'}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   {selectedParticipantId && (
-                    <Button variant="outline" onClick={() => handleParticipantSelect('all')}>
+                    <Button variant="outline" onClick={() => handleParticipantSelect('all')} className="bg-white">
                       Temizle
                     </Button>
                   )}
@@ -237,7 +355,7 @@ export default function SurveyReportPage() {
                 <p className="text-xs text-slate-500 mt-2">
                   {isIndividualView
                     ? 'Seçili katılımcının tüm yanıtlarını görüyorsunuz'
-                    : 'Bireysel yanıtları görmek için bir katılımcı seçin'}
+                    : 'Bireysel yanıtları görmek için bir katılımcı seçin veya arayın'}
                 </p>
               </CardContent>
             </Card>
@@ -269,7 +387,7 @@ function IndividualResponseView({
   onFileDownload
 }: {
   response: ParticipantResponseDto;
-  onFileDownload: (answerId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: string, fileName: string) => void;
 }) {
   return (
     <Card>
@@ -327,7 +445,7 @@ function QuestionResultCard({
 }: {
   question: QuestionReportDto;
   index: number;
-  onFileDownload: (answerId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: string, fileName: string) => void;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -366,6 +484,23 @@ function QuestionResultCard({
               <span>Oran: {question.responseRate.toFixed(1)}%</span>
               {question.isRequired && <span className="text-red-600">*Zorunlu</span>}
             </div>
+            {/* Question Attachment Display */}
+            {question.attachment && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <div className="text-xs font-medium text-blue-900 mb-2">📎 Soru Eki</div>
+                {question.attachment.contentType.startsWith('image/') ? (
+                  <QuestionAttachmentImage
+                    attachmentId={question.attachment.id}
+                    fileName={question.attachment.fileName}
+                    className="max-w-sm max-h-48 rounded border border-blue-300 object-contain"
+                  />
+                ) : (
+                  <div className="text-sm text-blue-800">
+                    {question.attachment.fileName} ({(question.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -469,7 +604,7 @@ function FileUploadView({
   onFileDownload
 }: {
   responses: any[];
-  onFileDownload: (answerId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: string, fileName: string) => void;
 }) {
   const getFilePreview = async (answerId: string) => {
     try {
@@ -498,13 +633,10 @@ function FileUploadView({
                 </div>
                 {isImage && (
                   <div className="mt-2">
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api'}/participations/answers/${file.answerId}/attachment`}
-                      alt={file.fileName}
+                    <AuthenticatedImage
+                      attachmentId={file.attachmentId}
+                      fileName={file.fileName}
                       className="max-w-md max-h-64 rounded border border-slate-200 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
                     />
                   </div>
                 )}
@@ -512,7 +644,7 @@ function FileUploadView({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onFileDownload(file.answerId, file.fileName)}
+                onClick={() => onFileDownload(file.attachmentId, file.fileName)}
               >
                 İndir
               </Button>
@@ -531,7 +663,7 @@ function ConditionalView({
   onFileDownload
 }: {
   question: QuestionReportDto;
-  onFileDownload: (answerId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: string, fileName: string) => void;
 }) {
   return (
     <div className="space-y-6">

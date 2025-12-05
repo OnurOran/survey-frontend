@@ -279,6 +279,7 @@ export interface QuestionReportDto {
   isRequired: boolean;
   totalResponses: number;
   responseRate: number;
+  attachment?: AttachmentMetadata | null;
   optionResults?: OptionResultDto[];
   textResponses?: TextResponseDto[];
   fileResponses?: FileResponseDto[];
@@ -302,6 +303,7 @@ export interface TextResponseDto {
 
 export interface FileResponseDto {
   answerId: string;
+  attachmentId: string;
   participationId: string;
   participantName?: string | null;
   fileName: string;
