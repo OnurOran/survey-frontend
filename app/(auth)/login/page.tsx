@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
@@ -9,9 +9,9 @@ import { Label } from '@/src/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 
 /**
- * Login Page - Metro Istanbul Branded
+ * Login Form Component - handles the actual login logic
  */
-export default function LoginPage() {
+function LoginForm() {
   const { login, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,5 +114,27 @@ export default function LoginPage() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Login Page - Metro Istanbul Branded
+ */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <Card className="shadow-2xl border-0">
+        <CardHeader className="space-y-1 pb-6">
+          <CardTitle className="text-2xl font-bold text-slate-800">
+            Sistem Girişi
+          </CardTitle>
+          <p className="text-sm text-slate-600">
+            Yükleniyor...
+          </p>
+        </CardHeader>
+      </Card>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

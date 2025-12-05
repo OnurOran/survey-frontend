@@ -168,6 +168,16 @@ export default function SurveysPage() {
               <Button variant="outline" size="sm" onClick={() => router.push(`/surveys/${survey.id}`)}>
                 Ön İzleme
               </Button>
+              {!isDraft && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/surveys/${survey.id}/report`)}
+                  className="bg-green-50 border-green-200 hover:bg-green-100"
+                >
+                  📊 Rapor
+                </Button>
+              )}
             </div>
           );
         },

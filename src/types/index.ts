@@ -246,6 +246,96 @@ export interface ApiErrorResponse {
 }
 
 // ============================================
+// SURVEY REPORTS
+// ============================================
+
+export interface SurveyReportDto {
+  surveyId: string;
+  title: string;
+  description: string;
+  accessType: AccessType;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+  totalParticipations: number;
+  completedParticipations: number;
+  completionRate: number;
+  participants: ParticipantSummaryDto[];
+  questions: QuestionReportDto[];
+}
+
+export interface ParticipantSummaryDto {
+  participationId: string;
+  participantName: string | null;
+  isCompleted: boolean;
+  startedAt: string;
+}
+
+export interface QuestionReportDto {
+  questionId: string;
+  text: string;
+  type: QuestionType;
+  order: number;
+  isRequired: boolean;
+  totalResponses: number;
+  responseRate: number;
+  optionResults?: OptionResultDto[];
+  textResponses?: TextResponseDto[];
+  fileResponses?: FileResponseDto[];
+  conditionalResults?: ConditionalBranchResultDto[];
+}
+
+export interface OptionResultDto {
+  optionId: string;
+  text: string;
+  order: number;
+  selectionCount: number;
+  percentage: number;
+}
+
+export interface TextResponseDto {
+  participationId: string;
+  participantName?: string | null;
+  textValue: string;
+  submittedAt: string;
+}
+
+export interface FileResponseDto {
+  answerId: string;
+  participationId: string;
+  participantName?: string | null;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  submittedAt: string;
+}
+
+export interface ConditionalBranchResultDto {
+  parentOptionId: string;
+  parentOptionText: string;
+  participantCount: number;
+  childQuestions: QuestionReportDto[];
+}
+
+export interface ParticipantResponseDto {
+  participationId: string;
+  participantName: string | null;
+  isCompleted: boolean;
+  startedAt: string;
+  completedAt: string | null;
+  answers: ParticipantAnswerDto[];
+}
+
+export interface ParticipantAnswerDto {
+  questionId: string;
+  questionText: string;
+  textValue: string | null;
+  selectedOptions: string[];
+  fileName: string | null;
+  answerId: string | null;
+}
+
+// ============================================
 // UTILITY TYPES
 // ============================================
 

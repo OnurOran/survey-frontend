@@ -4,3 +4,4 @@ export { useCreateSurvey } from './useCreateSurvey';
 export { useAddQuestion } from './useAddQuestion';
 export { usePublishSurvey } from './usePublishSurvey';
 export { useUpdateSurvey } from './useUpdateSurvey';
+export { useSurveyReport, useParticipantResponse } from './useSurveyReport';

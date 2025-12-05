@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+'use client';
+
+import * as React from 'react';
 import {
   ColumnDef,
   ColumnFiltersState,
+  SortingState,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Input } from './input';
+import { ChevronDown } from 'lucide-react';
+
 import { Button } from './button';
+import { Input } from './input';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from './dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table';
 
 type FilterOption = {
   label: string;
@@ -39,11 +58,13 @@ type DataTableProps<TData> = {
   /** Optional external sorting state */
   sorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
+  /** Enable column visibility toggle */
+  enableColumnVisibility?: boolean;
 };
 
 /**
- * Reusable data table with search, column filters, sorting, and pagination.
- * Uses TanStack Table; keeps styling minimal so it can be reused across pages.
+ * Enhanced reusable data table with shadcn/ui patterns.
+ * Features: search, filtering, sorting, pagination, column visibility.
  */
 export function DataTable<TData>({
   columns,
@@ -55,11 +76,13 @@ export function DataTable<TData>({
   emptyMessage = 'Kayıt bulunamadı',
   sorting,
   onSortingChange,
+  enableColumnVisibility = true,
 }: DataTableProps<TData>) {
-  const [internalSorting, setInternalSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = React.useState('');
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const resolvedSorting = sorting ?? internalSorting;
 
@@ -81,10 +104,12 @@ export function DataTable<TData>({
       sorting: resolvedSorting,
       globalFilter,
       columnFilters,
+      columnVisibility,
     },
     onSortingChange: handleSortingChange,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -102,9 +127,11 @@ export function DataTable<TData>({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
+      {/* Toolbar */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-wrap gap-2">
+          {/* Search Input */}
           {searchKey && (
             <div className="w-full md:w-64">
               <Input
@@ -116,13 +143,14 @@ export function DataTable<TData>({
             </div>
           )}
 
+          {/* Filter Dropdowns */}
           {filterableColumns.map((filter) => {
             const column = table.getColumn(filter.id);
             const value = (column?.getFilterValue() as string) ?? '';
             return (
               <select
                 key={filter.id}
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                 value={value}
                 onChange={(e) => column?.setFilterValue(e.target.value || undefined)}
               >
@@ -137,111 +165,137 @@ export function DataTable<TData>({
           })}
         </div>
 
-        {toolbarContent && <div className="flex items-center gap-2">{toolbarContent}</div>}
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const canSort = header.column.getCanSort();
-                    const sortingState = header.column.getIsSorted();
+        {/* Toolbar Actions */}
+        <div className="flex items-center gap-2">
+          {/* Column Visibility Toggle */}
+          {enableColumnVisibility && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="ml-auto h-10">
+                  Sütunlar <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => {
                     return (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        className="px-4 py-3 font-semibold"
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-                        {header.isPlaceholder ? null : (
-                          <button
-                            type="button"
-                            className={`flex items-center gap-1 ${canSort ? 'hover:text-slate-800' : ''}`}
-                            onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {canSort && (
-                              <span className="text-slate-400">
-                                {sortingState === 'asc' && '▲'}
-                                {sortingState === 'desc' && '▼'}
-                                {!sortingState && ''}
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </th>
+                        {typeof column.columnDef.header === 'string'
+                          ? column.columnDef.header
+                          : column.id}
+                      </DropdownMenuCheckboxItem>
                     );
                   })}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-t border-slate-200 hover:bg-slate-50"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 align-top">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="px-4 py-6 text-center text-slate-500"
-                  >
-                    {emptyMessage}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Custom Toolbar Content */}
+          {toolbarContent}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const sortingState = header.column.getIsSorted();
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : (
+                        <button
+                          type="button"
+                          className={`flex items-center gap-1 ${
+                            canSort ? 'hover:text-foreground cursor-pointer' : ''
+                          }`}
+                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {canSort && (
+                            <span className="text-muted-foreground text-xs">
+                              {sortingState === 'asc' && '▲'}
+                              {sortingState === 'desc' && '▼'}
+                              {!sortingState && '⇅'}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Sayfa boyutu:</span>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            value={table.getState().pagination.pageSize}
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
+          >
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span>Sayfa boyutu:</span>
-            <select
-              className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-sm text-slate-600">
-              Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Önceki
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Sonraki
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-sm text-muted-foreground">
+            Sayfa {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Önceki
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Sonraki
+          </Button>
         </div>
       </div>
     </div>

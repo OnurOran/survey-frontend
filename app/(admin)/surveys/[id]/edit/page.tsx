@@ -82,51 +82,51 @@ export default function EditSurveyPage() {
     }
 
     const request: CreateSurveyRequest = {
-      Title: form.title,
-      Description: form.description,
-      IntroText: form.introText || null,
-      ConsentText: form.consentText || null,
-      OutroText: form.outroText || null,
-      AccessType: form.accessType,
-      Questions: form.questions.map((q) => ({
-        Text: q.text,
-        Type: q.type,
-        Order: q.order,
-        IsRequired: q.isRequired,
-        Options:
+      title: form.title,
+      description: form.description,
+      introText: form.introText || null,
+      consentText: form.consentText || null,
+      outroText: form.outroText || null,
+      accessType: form.accessType,
+      questions: form.questions.map((q) => ({
+        text: q.text,
+        type: q.type,
+        order: q.order,
+        isRequired: q.isRequired,
+        options:
           q.type === 'OpenText' || q.type === 'FileUpload'
             ? null
             : q.options.map((opt) => ({
-                Text: opt.text,
-                Order: opt.order,
-                Value: opt.value || 0,
-                Attachment: opt.attachment || null,
+                text: opt.text,
+                order: opt.order,
+                value: opt.value || 0,
+                attachment: opt.attachment || null,
               })),
-        Attachment: q.attachment || null,
-        AllowedAttachmentContentTypes: q.type === 'FileUpload' ? q.allowedAttachmentContentTypes || null : null,
-        ChildQuestions:
+        attachment: q.attachment || null,
+        allowedAttachmentContentTypes: q.type === 'FileUpload' ? q.allowedAttachmentContentTypes || null : null,
+        childQuestions:
           q.type === 'Conditional' && q.childQuestions
             ? q.childQuestions.map((cq) => ({
-                ParentOptionOrder: cq.parentOptionOrder,
-                Text: cq.text,
-                Type: cq.type,
-                Order: cq.order,
-                IsRequired: cq.isRequired,
-                Options:
+                parentOptionOrder: cq.parentOptionOrder,
+                text: cq.text,
+                type: cq.type,
+                order: cq.order,
+                isRequired: cq.isRequired,
+                options:
                   cq.type === 'OpenText' || cq.type === 'FileUpload'
                     ? null
                     : cq.options.map((opt) => ({
-                        Text: opt.text,
-                        Order: opt.order,
-                        Value: opt.value || 0,
-                        Attachment: opt.attachment || null,
+                        text: opt.text,
+                        order: opt.order,
+                        value: opt.value || 0,
+                        attachment: opt.attachment || null,
                       })),
-                Attachment: cq.attachment || null,
-                AllowedAttachmentContentTypes: cq.type === 'FileUpload' ? cq.allowedAttachmentContentTypes || null : null,
+                attachment: cq.attachment || null,
+                allowedAttachmentContentTypes: cq.type === 'FileUpload' ? cq.allowedAttachmentContentTypes || null : null,
               }))
             : null,
       })),
-      Attachment: form.attachment || null,
+      attachment: form.attachment || null,
     };
 
     try {

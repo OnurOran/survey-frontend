@@ -361,7 +361,7 @@ export default function ParticipatePage() {
             <div className="pt-6">
               <Button
                 onClick={handleStart}
-                disabled={startParticipation.isPending || (survey.consentText && !consentGiven)}
+                disabled={startParticipation.isPending || !!(survey.consentText && !consentGiven)}
                 style={{ backgroundColor: '#0055a5' }}
                 className="w-full"
               >
