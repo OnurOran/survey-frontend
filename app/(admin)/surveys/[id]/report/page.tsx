@@ -12,7 +12,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { apiClient } from '@/src/lib/api';
 import type { QuestionReportDto, OptionResultDto, ParticipantResponseDto } from '@/src/types';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 const COLORS = ['#0055a5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -94,23 +94,22 @@ export default function SurveyReportPage() {
   const { data: report, isLoading, error } = useSurveyReport(surveyId);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('');
   const [selectedParticipantName, setSelectedParticipantName] = useState<string>('');
-  const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantName);
+  const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantId);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [forceExpandAll, setForceExpandAll] = useState(false);
 
-  const handleParticipantSelect = (participantName: string) => {
-    if (!participantName || participantName === 'all') {
+  const handleParticipantSelect = (participationId: string, participantName?: string | null) => {
+    if (!participationId || participationId === 'all') {
       setSelectedParticipantId('');
       setSelectedParticipantName('');
       setComboboxOpen(false);
       return;
     }
 
-    const participant = report?.participants.find(p => p.participantName === participantName);
-    if (participant) {
-      setSelectedParticipantId(participant.participationId);
-      setSelectedParticipantName(participantName);
-    }
+    const fallbackName = participantName || 'İsimsiz';
+    setSelectedParticipantId(participationId);
+    setSelectedParticipantName(fallbackName);
     setComboboxOpen(false);
   };
 
@@ -138,6 +137,8 @@ export default function SurveyReportPage() {
     if (!reportRef.current || !report) return;
 
     setExportingPDF(true);
+    setForceExpandAll(true);
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Create a temporary style element to override problematic CSS colors
     const styleOverride = document.createElement('style');
@@ -228,30 +229,65 @@ export default function SurveyReportPage() {
         : `Toplam Katılım: ${report.totalParticipations} | Tamamlanan: ${report.completedParticipations} (${report.completionRate.toFixed(1)}%)`;
       pdf.text(subtitle, margin, 28);
 
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 1.5,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        imageTimeout: 0,
-        backgroundColor: '#ffffff',
-      });
+      const pageContentHeight = pageHeight - 2 * margin;
+      let cursorY = margin;
+      const gap = 4; // small gap between blocks
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = pageWidth - 2 * margin;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const blocks = Array.from(reportRef.current.querySelectorAll<HTMLElement>('[data-pdf-block]'));
 
-      let heightLeft = imgHeight;
-      let position = 35;
+      for (const block of blocks) {
+        const canvas = await html2canvas(block, {
+          scale: 1.5,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          imageTimeout: 0,
+          backgroundColor: '#ffffff',
+        });
 
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - position - margin;
+        const imgWidth = pageWidth - 2 * margin;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + margin;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - margin;
+        // If the whole block fits and there is no space left on current page, start a new one
+        if (imgHeight <= pageContentHeight && cursorY + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          cursorY = margin;
+        }
+
+        // When the block is taller than a single page, slice it into page-sized chunks
+        if (imgHeight > pageContentHeight) {
+          const pxPerMm = canvas.width / imgWidth;
+          const slicePxHeight = Math.floor(pageContentHeight * pxPerMm);
+          let offsetPx = 0;
+
+          while (offsetPx < canvas.height) {
+            const remainingPx = canvas.height - offsetPx;
+            const currentSlicePx = Math.min(slicePxHeight, remainingPx);
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = currentSlicePx;
+            const sliceCtx = sliceCanvas.getContext('2d');
+            if (sliceCtx) {
+              sliceCtx.drawImage(canvas, 0, -offsetPx);
+            }
+
+            const sliceData = sliceCanvas.toDataURL('image/png');
+            const sliceHeightMm = currentSlicePx / pxPerMm;
+
+            if (cursorY + sliceHeightMm > pageHeight - margin) {
+              pdf.addPage();
+              cursorY = margin;
+            }
+
+            pdf.addImage(sliceData, 'PNG', margin, cursorY, imgWidth, sliceHeightMm);
+            cursorY += sliceHeightMm + gap;
+            offsetPx += currentSlicePx;
+          }
+        } else {
+          // Standard block
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, cursorY, imgWidth, imgHeight);
+          cursorY += imgHeight + gap;
+        }
       }
 
       const filename = selectedParticipantId
@@ -267,6 +303,7 @@ export default function SurveyReportPage() {
       if (styleEl) {
         styleEl.remove();
       }
+      setForceExpandAll(false);
       setExportingPDF(false);
     }
   };
@@ -322,7 +359,7 @@ export default function SurveyReportPage() {
       <div className="container mx-auto px-6 py-6 w-full">
         <div className="space-y-6" ref={reportRef}>
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-pdf-block>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">Toplam Katılım</CardTitle>
@@ -359,7 +396,7 @@ export default function SurveyReportPage() {
 
           {/* Survey Info - Intro/Outro/Attachment */}
           {(report.introText || report.outroText || report.attachment) && (
-            <Card className="bg-white">
+            <Card className="bg-white" data-pdf-block>
               <CardHeader>
                 <CardTitle>Anket Bilgileri</CardTitle>
               </CardHeader>
@@ -402,7 +439,7 @@ export default function SurveyReportPage() {
 
           {/* Participant Selector - Only for Internal surveys */}
           {report.accessType === 'Internal' && report.participants.length > 0 && (
-            <Card className="bg-white">
+            <Card className="bg-white" data-pdf-block>
               <CardHeader>
                 <CardTitle>Katılımcı Seçimi</CardTitle>
               </CardHeader>
@@ -436,7 +473,7 @@ export default function SurveyReportPage() {
                               <Check
                                 className={cn(
                                   'mr-2 h-4 w-4',
-                                  !selectedParticipantName ? 'opacity-100' : 'opacity-0'
+                                  !selectedParticipantId ? 'opacity-100' : 'opacity-0'
                                 )}
                               />
                               📊 Tüm Katılımcılar (Toplu Rapor)
@@ -444,14 +481,15 @@ export default function SurveyReportPage() {
                             {report.participants.map((participant) => (
                               <CommandItem
                                 key={participant.participationId}
-                                value={participant.participantName || ''}
-                                onSelect={handleParticipantSelect}
+                                value={participant.participantName || 'İsimsiz'}
+                                keywords={[participant.participationId]}
+                                onSelect={() => handleParticipantSelect(participant.participationId, participant.participantName)}
                                 className="bg-white hover:bg-slate-100"
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    selectedParticipantName === participant.participantName
+                                    selectedParticipantId === participant.participationId
                                       ? 'opacity-100'
                                       : 'opacity-0'
                                   )}
@@ -488,6 +526,7 @@ export default function SurveyReportPage() {
               index={index}
               onFileDownload={handleFileDownload}
               participantResponse={isIndividualView ? participantResponse : undefined}
+              forceExpandAll={forceExpandAll}
             />
           ))}
         </div>
@@ -557,15 +596,19 @@ function QuestionResultCard({
   question,
   index,
   onFileDownload,
-  participantResponse
+  participantResponse,
+  forceExpandAll
 }: {
   question: QuestionReportDto;
   index: number;
   onFileDownload: (attachmentId: string, fileName: string) => void;
   participantResponse?: ParticipantResponseDto;
+  forceExpandAll?: boolean;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [collapsed, setCollapsed] = useState(false);
+  const isCollapsed = forceExpandAll ? false : collapsed;
 
   // Find this participant's answer for this question
   const participantAnswer = participantResponse?.answers.find(a => a.questionId === question.questionId);
@@ -616,9 +659,9 @@ function QuestionResultCard({
   };
 
   return (
-    <Card>
+    <Card data-pdf-block>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <CardTitle className="text-lg">
               S{index + 1}: {question.text}
@@ -647,59 +690,81 @@ function QuestionResultCard({
               </div>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCollapsed(prev => !prev)}
+            className="shrink-0"
+          >
+            {isCollapsed ? (
+              <>
+                <ChevronDown className="h-4 w-4 mr-1" /> Genişlet
+              </>
+            ) : (
+              <>
+                <ChevronUp className="h-4 w-4 mr-1" /> Daralt
+              </>
+            )}
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {renderQuestionContent()}
+        {isCollapsed ? (
+          <div className="text-sm text-slate-500">Bu soru daraltıldı.</div>
+        ) : (
+          <>
+            {renderQuestionContent()}
 
-        {/* Individual Participant Answer */}
-        {participantAnswer && (
-          <div className="mt-6 pt-4 border-t-2 border-blue-200">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="text-sm font-bold text-blue-900">
-                  👤 {participantResponse?.participantName || 'Seçili Katılımcı'} - Yanıt
-                </div>
-              </div>
-              <div className="text-sm text-slate-800">
-                {participantAnswer.textValue && (
-                  <div className="whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
-                    {participantAnswer.textValue}
+            {/* Individual Participant Answer */}
+            {participantAnswer && (
+              <div className="mt-6 pt-4 border-t-2 border-blue-200">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-sm font-bold text-blue-900">
+                      👤 {participantResponse?.participantName || 'Seçili Katılımcı'} - Yanıt
+                    </div>
                   </div>
-                )}
-                {participantAnswer.selectedOptions && participantAnswer.selectedOptions.length > 0 && (
-                  <ul className="list-disc list-inside space-y-1 bg-white p-3 rounded border border-blue-100">
-                    {participantAnswer.selectedOptions.map((opt, i) => (
-                      <li key={i} className="text-slate-700">{opt}</li>
-                    ))}
-                  </ul>
-                )}
-                {participantAnswer.fileName && (
-                  <div className="bg-white p-3 rounded border border-blue-100">
-                    {participantAnswer.answerId ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onFileDownload(participantAnswer.answerId!, participantAnswer.fileName!)}
-                        className="bg-blue-50 border-blue-200 hover:bg-blue-100"
-                      >
-                        📎 {participantAnswer.fileName}
-                      </Button>
-                    ) : (
-                      <div className="text-sm text-slate-600">
-                        📎 {participantAnswer.fileName}
+                  <div className="text-sm text-slate-800">
+                    {participantAnswer.textValue && (
+                      <div className="whitespace-pre-wrap bg-white p-3 rounded border border-blue-100">
+                        {participantAnswer.textValue}
                       </div>
                     )}
+                    {participantAnswer.selectedOptions && participantAnswer.selectedOptions.length > 0 && (
+                      <ul className="list-disc list-inside space-y-1 bg-white p-3 rounded border border-blue-100">
+                        {participantAnswer.selectedOptions.map((opt, i) => (
+                          <li key={i} className="text-slate-700">{opt}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {participantAnswer.fileName && (
+                      <div className="bg-white p-3 rounded border border-blue-100">
+                        {participantAnswer.answerId ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onFileDownload(participantAnswer.answerId!, participantAnswer.fileName!)}
+                            className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+                          >
+                            📎 {participantAnswer.fileName}
+                          </Button>
+                        ) : (
+                          <div className="text-sm text-slate-600">
+                            📎 {participantAnswer.fileName}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!participantAnswer.textValue &&
+                     (!participantAnswer.selectedOptions || participantAnswer.selectedOptions.length === 0) &&
+                     !participantAnswer.fileName && (
+                      <span className="text-slate-500 italic">Yanıt verilmedi</span>
+                    )}
                   </div>
-                )}
-                {!participantAnswer.textValue &&
-                 (!participantAnswer.selectedOptions || participantAnswer.selectedOptions.length === 0) &&
-                 !participantAnswer.fileName && (
-                  <span className="text-slate-500 italic">Yanıt verilmedi</span>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

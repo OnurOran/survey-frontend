@@ -14,16 +14,16 @@ export function useSurveyReport(surveyId: string | undefined) {
   });
 }
 
-export function useParticipantResponse(surveyId: string | undefined, participantName: string | undefined) {
+export function useParticipantResponse(surveyId: string | undefined, participationId: string | undefined) {
   return useQuery({
-    queryKey: ['participant-response', surveyId, participantName],
+    queryKey: ['participant-response', surveyId, participationId],
     queryFn: async () => {
-      if (!surveyId || !participantName) throw new Error('Survey ID and participant name are required');
+      if (!surveyId || !participationId) throw new Error('Survey ID and participation id are required');
       const response = await apiClient.get<ParticipantResponseDto>(`/surveys/${surveyId}/report/participant`, {
-        params: { participantName },
+        params: { participationId },
       });
       return response.data;
     },
-    enabled: !!surveyId && !!participantName && participantName.length > 0,
+    enabled: !!surveyId && !!participationId && participationId.length > 0,
   });
 }
