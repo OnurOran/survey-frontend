@@ -189,6 +189,12 @@ export interface SubmitAnswerRequest {
 // Response is just a string (participationId)
 export type StartParticipationResponse = string;
 
+export interface ParticipationStatusResult {
+  hasParticipated: boolean;
+  isCompleted: boolean;
+  completedAt: string | null;
+}
+
 // ============================================
 // MANAGEMENT
 // ============================================

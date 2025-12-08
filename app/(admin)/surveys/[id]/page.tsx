@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 import { Label } from '@/src/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/src/components/ui/dialog';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
+import { AttachmentViewer } from '@/src/components/AttachmentViewer';
 
 // API URL for attachments
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
@@ -159,11 +160,10 @@ export default function SurveyDetailPage() {
           {/* Survey Attachment */}
           {survey.attachment && (
             <div className="mt-4">
-              <img
-                src={getAttachmentUrl(survey.attachment.id)}
-                alt={survey.attachment.fileName}
-                className="max-w-full h-auto rounded-lg border border-slate-200"
-                style={{ maxHeight: '300px' }}
+              <AttachmentViewer
+                attachment={survey.attachment}
+                apiUrl={API_URL}
+                maxHeight="300px"
               />
             </div>
           )}
@@ -293,11 +293,10 @@ export default function SurveyDetailPage() {
                       {/* Question Attachment */}
                       {question.attachment && (
                         <div className="mt-3">
-                          <img
-                            src={getAttachmentUrl(question.attachment.id)}
-                            alt={question.attachment.fileName}
-                            className="max-w-full h-auto rounded border border-slate-200"
-                            style={{ maxHeight: '300px' }}
+                          <AttachmentViewer
+                            attachment={question.attachment}
+                            apiUrl={API_URL}
+                            maxHeight="300px"
                           />
                         </div>
                       )}
@@ -314,11 +313,10 @@ export default function SurveyDetailPage() {
                               {/* Option Attachment */}
                               {option.attachment && (
                                 <div className="mt-2 ml-4">
-                                  <img
-                                    src={getAttachmentUrl(option.attachment.id)}
-                                    alt={option.attachment.fileName}
-                                    className="max-w-full h-auto rounded border border-slate-200"
-                                    style={{ maxHeight: '150px' }}
+                                  <AttachmentViewer
+                                    attachment={option.attachment}
+                                    apiUrl={API_URL}
+                                    maxHeight="150px"
                                   />
                                 </div>
                               )}

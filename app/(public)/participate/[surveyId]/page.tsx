@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSurvey } from '@/src/features/survey/hooks';
-import { useStartParticipation, useSubmitAnswer, useCompleteParticipation } from '@/src/features/participation/hooks';
+import { useStartParticipation, useSubmitAnswer, useCompleteParticipation, useParticipationStatus } from '@/src/features/participation/hooks';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
@@ -13,6 +13,7 @@ import { Textarea } from '@/src/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
 import { Checkbox } from '@/src/components/ui/checkbox';
 import type { QuestionDto } from '@/src/types';
+import { AttachmentViewer } from '@/src/components/AttachmentViewer';
 
 // Character limit for open text answers
 const MAX_TEXT_ANSWER_LENGTH = 2000;
@@ -36,6 +37,7 @@ export default function ParticipatePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { data: survey, isLoading, error } = useSurvey(surveyId);
+  const { data: participationStatus, isLoading: statusLoading } = useParticipationStatus(surveyId);
   const startParticipation = useStartParticipation();
   const submitAnswer = useSubmitAnswer();
   const completeParticipation = useCompleteParticipation();
@@ -214,7 +216,7 @@ export default function ParticipatePage() {
   };
 
   // Loading state
-  if (isLoading || authLoading) {
+  if (isLoading || authLoading || statusLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-slate-600">Yükleniyor...</div>
@@ -327,12 +329,49 @@ export default function ParticipatePage() {
             {/* Survey Attachment */}
             {survey.attachment && (
               <div className="pt-4">
-                <img
-                  src={getAttachmentUrl(survey.attachment.id)}
-                  alt={survey.attachment.fileName}
-                  className="max-w-full h-auto rounded-lg border border-slate-200"
-                  style={{ maxHeight: '300px' }}
+                <AttachmentViewer
+                  attachment={survey.attachment}
+                  apiUrl={API_URL}
+                  maxHeight="300px"
                 />
+              </div>
+            )}
+
+            {/* Already Completed Message */}
+            {participationStatus?.isCompleted && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <h3 className="font-semibold text-green-800 mb-1">Bu anketi zaten tamamladınız</h3>
+                    <p className="text-sm text-green-700">
+                      {participationStatus.completedAt && (
+                        <>Tamamlanma tarihi: {new Date(participationStatus.completedAt).toLocaleDateString('tr-TR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</>
+                      )}
+                    </p>
+                    <p className="text-sm text-green-700 mt-1">
+                      Ankete tekrar katılamazsınız. Katkılarınız için teşekkür ederiz.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -361,13 +400,21 @@ export default function ParticipatePage() {
             <div className="pt-6">
               <Button
                 onClick={handleStart}
-                disabled={startParticipation.isPending || !!(survey.consentText && !consentGiven)}
+                disabled={
+                  participationStatus?.isCompleted ||
+                  startParticipation.isPending ||
+                  !!(survey.consentText && !consentGiven)
+                }
                 style={{ backgroundColor: '#0055a5' }}
                 className="w-full"
               >
-                {startParticipation.isPending ? 'Başlatılıyor...' : 'Ankete Başla'}
+                {participationStatus?.isCompleted
+                  ? 'Anket Tamamlandı'
+                  : startParticipation.isPending
+                  ? 'Başlatılıyor...'
+                  : 'Ankete Başla'}
               </Button>
-              {survey.consentText && !consentGiven && (
+              {survey.consentText && !consentGiven && !participationStatus?.isCompleted && (
                 <p className="text-sm text-red-600 mt-2 text-center">
                   Devam etmek için lütfen onay kutusunu işaretleyin.
                 </p>
@@ -418,11 +465,10 @@ export default function ParticipatePage() {
             {/* Question Attachment */}
             {currentQuestion.attachment && (
               <div className="mb-4">
-                <img
-                  src={getAttachmentUrl(currentQuestion.attachment.id)}
-                  alt={currentQuestion.attachment.fileName}
-                  className="max-w-full h-auto rounded-lg border border-slate-200"
-                  style={{ maxHeight: '400px' }}
+                <AttachmentViewer
+                  attachment={currentQuestion.attachment}
+                  apiUrl={API_URL}
+                  maxHeight="400px"
                 />
               </div>
             )}
@@ -439,11 +485,10 @@ export default function ParticipatePage() {
                     </div>
                     {option.attachment && (
                       <div className="ml-6">
-                        <img
-                          src={getAttachmentUrl(option.attachment.id)}
-                          alt={option.attachment.fileName}
-                          className="max-w-full h-auto rounded border border-slate-200"
-                          style={{ maxHeight: '200px' }}
+                        <AttachmentViewer
+                          attachment={option.attachment}
+                          apiUrl={API_URL}
+                          maxHeight="200px"
                         />
                       </div>
                     )}
@@ -478,11 +523,10 @@ export default function ParticipatePage() {
                     </div>
                     {option.attachment && (
                       <div className="ml-6">
-                        <img
-                          src={getAttachmentUrl(option.attachment.id)}
-                          alt={option.attachment.fileName}
-                          className="max-w-full h-auto rounded border border-slate-200"
-                          style={{ maxHeight: '200px' }}
+                        <AttachmentViewer
+                          attachment={option.attachment}
+                          apiUrl={API_URL}
+                          maxHeight="200px"
                         />
                       </div>
                     )}
