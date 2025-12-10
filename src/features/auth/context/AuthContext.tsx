@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import apiClient, { tokenManager } from '@/src/lib/api';
-import { AuthTokensDto, AuthTestResponse, LoginRequest } from '@/src/types';
+import apiClient from '@/src/lib/api';
+import { AuthTestResponse, LoginRequest } from '@/src/types';
 import { logError, parseApiError } from '@/src/lib/errors';
 import { toast } from 'sonner';
 
@@ -113,17 +113,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Check authentication status by calling /auth/test
    */
   const checkAuth = useCallback(async () => {
-    const token = tokenManager.getAccessToken();
-
-    if (!token) {
-      setIsAuthenticated(false);
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await apiClient.get<AuthTestResponse>('/auth/test');
+      const response = await apiClient.get<AuthTestResponse>('/auth/test', {
+        // 401 is expected when no session exists; don't throw/refresh
+        validateStatus: (status: number) => status < 500,
+        // Custom flag to skip refresh interceptor
+        skipAuthRefresh: true,
+      } as any);
+
+      if (response.status === 401 || !response.data?.isAuthenticated) {
+        setIsAuthenticated(false);
+        setUser(null);
+        return;
+      }
+
       const userData = extractUserFromClaims(response.data);
 
       if (userData) {
@@ -132,13 +135,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsAuthenticated(false);
         setUser(null);
-        tokenManager.clearTokens();
       }
     } catch (error) {
       logError(error, 'Auth Check');
       setIsAuthenticated(false);
       setUser(null);
-      tokenManager.clearTokens();
     } finally {
       setIsLoading(false);
     }
@@ -152,13 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setIsLoading(true);
 
-        const response = await apiClient.post<AuthTokensDto>('/auth/login', credentials);
-        const tokens = response.data;
-
-        // Store tokens
-        tokenManager.setTokens(tokens);
-
-        // Fetch user info and set auth state
+        await apiClient.post('/auth/login', credentials);
         const authResponse = await apiClient.get<AuthTestResponse>('/auth/test');
         const userData = extractUserFromClaims(authResponse.data);
 
@@ -173,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logError(error, 'Login');
         const errorMessage = parseApiError(error);
         toast.error(errorMessage);
-        tokenManager.clearTokens();
         throw error;
       } finally {
         setIsLoading(false);
@@ -187,18 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const logout = useCallback(async () => {
     try {
-      const refreshToken = tokenManager.getRefreshToken();
-
-      if (refreshToken) {
-        // Call logout endpoint to invalidate refresh token on backend
-        await apiClient.post('/auth/logout', { refreshToken }).catch((error) => {
-          // Log but don't throw - we still want to clear local tokens
-          logError(error, 'Logout');
-        });
-      }
+      await apiClient.post('/auth/logout', {}).catch((error) => {
+        // Log but don't throw - we still want to clear local state
+        logError(error, 'Logout');
+      });
     } finally {
-      // Clear tokens and state regardless of API call success
-      tokenManager.clearTokens();
       setIsAuthenticated(false);
       setUser(null);
 
@@ -222,7 +209,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     const handleLogout = () => {
-      tokenManager.clearTokens();
       setIsAuthenticated(false);
       setUser(null);
       toast.error('Session expired. Please login again.');

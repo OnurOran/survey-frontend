@@ -3,7 +3,7 @@ import { apiClient } from '@/src/lib/api';
 import type { SurveyReportDto, ParticipantResponseDto } from '@/src/types';
 
 export function useSurveyReport(surveyId: string | undefined) {
-  return useQuery({
+  return useQuery<SurveyReportDto>({
     queryKey: ['survey-report', surveyId],
     queryFn: async () => {
       if (!surveyId) throw new Error('Survey ID is required');
@@ -15,7 +15,7 @@ export function useSurveyReport(surveyId: string | undefined) {
 }
 
 export function useParticipantResponse(surveyId: string | undefined, participationId: string | undefined) {
-  return useQuery({
+  return useQuery<ParticipantResponseDto>({
     queryKey: ['participant-response', surveyId, participationId],
     queryFn: async () => {
       if (!surveyId || !participationId) throw new Error('Survey ID and participation id are required');

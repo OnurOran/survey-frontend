@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/src/providers/QueryProvider";
 import { AuthProvider } from "@/src/features/auth/context/AuthContext";
 import { Toaster } from "sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using system fonts to avoid remote fetch during build
+const geistSans = { variable: "" };
+const geistMono = { variable: "" };
 
 export const metadata: Metadata = {
   title: "Survey Application",

@@ -609,6 +609,7 @@ function QuestionResultCard({
   const itemsPerPage = 10;
   const [collapsed, setCollapsed] = useState(false);
   const isCollapsed = forceExpandAll ? false : collapsed;
+  const selectedParticipantName = participantResponse?.participantName ?? undefined;
 
   // Find this participant's answer for this question
   const participantAnswer = participantResponse?.answers.find(a => a.questionId === question.questionId);
@@ -640,14 +641,14 @@ function QuestionResultCard({
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
-          selectedParticipantName={participantResponse?.participantName || undefined}
+          selectedParticipantName={selectedParticipantName}
         />;
 
       case 'FileUpload':
         return <FileUploadView
           responses={question.fileResponses || []}
           onFileDownload={onFileDownload}
-          selectedParticipantName={participantResponse?.participantName || undefined}
+          selectedParticipantName={selectedParticipantName}
         />;
 
       case 'Conditional':

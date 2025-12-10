@@ -1,15 +1,10 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
-import { AuthTokensDto, RefreshTokenRequest } from '@/src/types';
 import { logError } from './errors';
-
-// Constants for token storage
-const ACCESS_TOKEN_KEY = process.env.NEXT_PUBLIC_TOKEN_STORAGE_KEY || 'survey_access_token';
-const REFRESH_TOKEN_KEY = process.env.NEXT_PUBLIC_REFRESH_TOKEN_STORAGE_KEY || 'survey_refresh_token';
 
 /**
  * Create the main API client instance
  * - Base URL from environment variable
- * - withCredentials enabled for cookie support (X-Survey-Participant)
+ * - withCredentials enabled for cookie-based auth
  * - JSON content type by default
  */
 export const apiClient = axios.create({
@@ -20,6 +15,8 @@ export const apiClient = axios.create({
   },
   timeout: 30000, // 30 seconds
 });
+
+type AuthenticatedRequest = AxiosRequestConfig & { _retry?: boolean; skipAuthRefresh?: boolean };
 
 // Flag to prevent infinite refresh loops
 let isRefreshing = false;
@@ -42,64 +39,34 @@ const processQueue = (error: Error | null = null) => {
   failedQueue = [];
 };
 
-/**
- * Token management utilities
- */
-export const tokenManager = {
-  getAccessToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  },
+const refreshSession = async () => {
+  const refreshConfig: AuthenticatedRequest = {
+    withCredentials: true,
+    // Custom flag so the interceptor does not recurse on refresh calls
+    headers: { 'X-Auth-Refresh': 'true' },
+    skipAuthRefresh: true,
+  };
 
-  getRefreshToken: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-  },
-
-  setTokens: (tokens: AuthTokensDto): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
-  },
-
-  clearTokens: (): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
+  await apiClient.post('/auth/refresh', {}, refreshConfig);
 };
 
 /**
- * Request Interceptor
- * Automatically attach the Authorization Bearer token to all requests
- */
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = tokenManager.getAccessToken();
-
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    logError(error, 'Request Interceptor');
-    return Promise.reject(error);
-  }
-);
-
-/**
  * Response Interceptor
- * Handle 401 errors and automatically refresh tokens
+ * Handle 401 errors and automatically refresh tokens using httpOnly cookies
  */
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = (error.config as AuthenticatedRequest) ?? {};
+    const url = originalRequest.url ?? '';
 
     // If the error is not 401 or we've already retried, reject immediately
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (error.response?.status !== 401 || originalRequest._retry || originalRequest.skipAuthRefresh) {
+      return Promise.reject(error);
+    }
+
+    // Do not attempt refresh for auth endpoints or auth test (e.g., first load without session)
+    if (url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/test')) {
       return Promise.reject(error);
     }
 
@@ -108,46 +75,17 @@ apiClient.interceptors.response.use(
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       })
-        .then(() => {
-          // Retry the original request with the new token
-          return apiClient(originalRequest);
-        })
-        .catch((err) => {
-          return Promise.reject(err);
-        });
+        .then(() => apiClient(originalRequest))
+        .catch((err) => Promise.reject(err));
     }
 
     // Mark this request as retried to prevent infinite loops
     originalRequest._retry = true;
     isRefreshing = true;
 
-    const refreshToken = tokenManager.getRefreshToken();
-
-    // If no refresh token is available, clear tokens and reject
-    if (!refreshToken) {
-      isRefreshing = false;
-      tokenManager.clearTokens();
-      processQueue(new Error('No refresh token available'));
-      return Promise.reject(error);
-    }
-
     try {
-      // Attempt to refresh the token
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
-      const response = await axios.post<AuthTokensDto>(
-        `${apiUrl}/auth/refresh`,
-        { refreshToken } as RefreshTokenRequest,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const newTokens = response.data;
-
-      // Store the new tokens
-      tokenManager.setTokens(newTokens);
+      // Attempt to refresh the token using cookies
+      await refreshSession();
 
       // Process the queue of failed requests
       processQueue();
@@ -155,9 +93,8 @@ apiClient.interceptors.response.use(
       // Retry the original request with the new token
       return apiClient(originalRequest);
     } catch (refreshError) {
-      // If refresh fails, clear tokens and reject all queued requests
+      // If refresh fails, reject all queued requests
       logError(refreshError, 'Token Refresh');
-      tokenManager.clearTokens();
       processQueue(refreshError as Error);
 
       // Redirect to login page or trigger a logout event

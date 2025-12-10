@@ -29,11 +29,11 @@ export interface LoginRequest {
 }
 
 export interface RefreshTokenRequest {
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export interface LogoutRequest {
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export interface AuthTokensDto {
