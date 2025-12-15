@@ -16,6 +16,12 @@ const DEFAULT_ALLOWED_TYPES = [
   'image/jpg',
   'image/webp',
   'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+  'application/msword', // DOC
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+  'application/vnd.ms-excel', // XLS
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+  'application/vnd.ms-powerpoint', // PPT
 ];
 
 const MAX_SIZE_MB = 5;

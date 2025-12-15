@@ -18,7 +18,7 @@ export const conditionalConfig: QuestionTypeConfig = {
   // Capabilities
   requiresOptions: true,
   supportsQuestionAttachment: true,
-  supportsOptionAttachment: false,
+  supportsOptionAttachment: true,
   supportsAllowedContentTypes: false,
 
   // Components

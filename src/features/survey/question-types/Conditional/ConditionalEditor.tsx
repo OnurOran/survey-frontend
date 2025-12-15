@@ -8,7 +8,7 @@ import { Button } from '@/src/components/ui/button';
 import { Checkbox } from '@/src/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
 import { Textarea } from '@/src/components/ui/textarea';
-import { QuestionFormData, ChildQuestionFormData, OptionFormData } from '../types';
+import { QuestionFormData, ChildQuestionFormData, OptionFormData, QuestionEditorProps } from '../types';
 import { QuestionType } from '@/src/types';
 import { Trash2, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { AttachmentUpload } from '../../components/AttachmentUpload';
@@ -21,12 +21,14 @@ const AVAILABLE_CONTENT_TYPES = [
   { value: 'application/pdf', label: 'PDF Documents' },
 ];
 
-interface ConditionalEditorProps {
-  question: QuestionFormData;
-  onChange: (question: QuestionFormData) => void;
-}
-
-export function ConditionalEditor({ question, onChange }: ConditionalEditorProps) {
+export function ConditionalEditor({
+  question,
+  questionIndex,
+  totalQuestions,
+  onChange,
+  onRemove,
+  onReorder,
+}: QuestionEditorProps) {
   const [expandedOptions, setExpandedOptions] = useState<Record<number, boolean>>({});
 
   // Initialize options/childQuestions safely (avoid setState during render)
@@ -114,10 +116,37 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
     });
   };
 
+  // Ensure child SingleSelect/MultiSelect questions have at least 2 options
+  useEffect(() => {
+    if (!question.childQuestions || question.childQuestions.length === 0) return;
+
+    let updated = false;
+    const updatedChildren = question.childQuestions.map(child => {
+      if ((child.type === 'SingleSelect' || child.type === 'MultiSelect') && child.options.length < 2) {
+        updated = true;
+        const padded = [
+          ...child.options.map((opt, idx) => ({ ...opt, order: idx + 1 })),
+          ...Array.from({ length: 2 - child.options.length }, (_, idx) => {
+            const order = child.options.length + idx + 1;
+            return { text: '', order, value: order, attachment: null };
+          }),
+        ];
+        return { ...child, options: padded };
+      }
+      return child;
+    });
+
+    if (updated) {
+      onChange({ ...question, childQuestions: updatedChildren });
+    }
+  }, [onChange, question]);
+
   const addChildOption = (parentOptionOrder: number, childIndex: number) => {
     const childQuestions = question.childQuestions || [];
     const optionChildren = childQuestions.filter(cq => cq.parentOptionOrder === parentOptionOrder);
     const child = optionChildren[childIndex];
+
+    if (child.options.length >= 10) return;
 
     const newOption: OptionFormData = {
       text: '',
@@ -137,6 +166,31 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
     const child = optionChildren[childIndex];
 
     const newOptions = child.options.filter((_, idx) => idx !== optionIndex);
+    // Re-order remaining options
+    newOptions.forEach((opt, i) => {
+      opt.order = i + 1;
+    });
+
+    updateChildQuestion(parentOptionOrder, childIndex, {
+      options: newOptions,
+    });
+  };
+
+  const reorderChildOption = (parentOptionOrder: number, childIndex: number, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const childQuestions = question.childQuestions || [];
+    const optionChildren = childQuestions.filter(cq => cq.parentOptionOrder === parentOptionOrder);
+    const child = optionChildren[childIndex];
+
+    const newOptions = [...child.options];
+    const [movedOption] = newOptions.splice(fromIndex, 1);
+    newOptions.splice(toIndex, 0, movedOption);
+
+    // Re-order all options
+    newOptions.forEach((opt, i) => {
+      opt.order = i + 1;
+    });
 
     updateChildQuestion(parentOptionOrder, childIndex, {
       options: newOptions,
@@ -240,30 +294,83 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
   };
 
   return (
-    <div className="space-y-6">
-      {/* Parent Question */}
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="question-text">Soru Metni *</Label>
-          <Input
-            id="question-text"
-            value={question.text}
-            onChange={(e) => onChange({ ...question, text: e.target.value, description: undefined })}
-            placeholder="Koşullu sorunuzu yazın..."
-          />
-        </div>
+    <Card className="bg-white border-2">
+      <CardHeader className="pb-3 bg-slate-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-700">
+              Soru {questionIndex + 1}
+            </span>
+            <span className="px-3 py-1 text-xs font-semibold rounded" style={{ backgroundColor: '#0055a5', color: 'white' }}>
+              Koşullu Soru
+            </span>
+          </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="is-required"
-            checked={question.isRequired}
-            onCheckedChange={(checked) => onChange({ ...question, isRequired: checked as boolean, description: undefined })}
-          />
-          <Label htmlFor="is-required" className="cursor-pointer">
-            Zorunlu soru
-          </Label>
+          <div className="flex items-center gap-2">
+            {/* Order dropdown */}
+            <Select
+              value={String(questionIndex + 1)}
+              onValueChange={(value) => onReorder(parseInt(value) - 1)}
+            >
+              <SelectTrigger className="w-24 h-9 text-sm bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                {Array.from({ length: totalQuestions }, (_, i) => (
+                  <SelectItem key={i} value={String(i + 1)}>
+                    Sıra {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Remove button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRemove}
+              className="text-red-600 hover:text-white hover:bg-red-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </Button>
+          </div>
         </div>
-      </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 pt-4">
+        {/* Parent Question */}
+        <div className="space-y-4">
+          <div>
+            <Label className="font-semibold">Soru Metni *</Label>
+            <Input
+              value={question.text}
+              onChange={(e) => onChange({ ...question, text: e.target.value, description: undefined })}
+              placeholder="Koşullu sorunuzu yazın..."
+              className="mt-1"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={question.isRequired}
+              onCheckedChange={(checked) => onChange({ ...question, isRequired: checked as boolean, description: undefined })}
+            />
+            <Label className="cursor-pointer font-medium">Zorunlu soru</Label>
+          </div>
+
+          {/* Question attachment */}
+          <div>
+            <Label className="text-sm font-semibold text-slate-700">Soru Eki (Opsiyonel)</Label>
+            <AttachmentUpload
+              attachment={question.attachment}
+              onChange={(attachment) => onChange({ ...question, attachment })}
+              label="Dosya Ekle"
+            />
+          </div>
+        </div>
 
       {/* Options with Child Questions */}
       <div className="space-y-4">
@@ -299,13 +406,25 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </Button>
 
-                  <div className="flex-1">
-                    <Label>Seçenek {option.order}</Label>
-                    <Input
-                      value={option.text}
-                      onChange={(e) => handleOptionTextChange(index, e.target.value)}
-                      placeholder={`Seçenek ${option.order} metni...`}
-                      className="mt-1"
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <Label>Seçenek {option.order}</Label>
+                      <Input
+                        value={option.text}
+                        onChange={(e) => handleOptionTextChange(index, e.target.value)}
+                        placeholder={`Seçenek ${option.order} metni...`}
+                        className="mt-1"
+                      />
+                    </div>
+                    {/* Parent Option Attachment */}
+                    <AttachmentUpload
+                      attachment={option.attachment}
+                      onChange={(attachment) => {
+                        const newOptions = [...question.options];
+                        newOptions[index] = { ...newOptions[index], attachment };
+                        onChange({ ...question, options: newOptions });
+                      }}
+                      label="Dosya Ekle"
                     />
                   </div>
 
@@ -446,25 +565,53 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                                   <div className="space-y-2">
                                     <Label className="text-sm">Seçenekler</Label>
                                     {child.options.map((opt, optIdx) => (
-                                      <div key={optIdx} className="p-2 border rounded bg-white space-y-2">
+                                      <div key={optIdx} className="p-3 border rounded bg-white space-y-2">
                                         <div className="flex gap-2">
+                                          {/* Visual Icon - Radio or Checkbox */}
+                                          <div className="flex items-center justify-center w-8 h-9 bg-slate-50 border rounded">
+                                            <div
+                                              className={`w-3 h-3 border-2 border-slate-400 ${
+                                                child.type === 'SingleSelect' ? 'rounded-full' : 'rounded-sm'
+                                              }`}
+                                            />
+                                          </div>
                                           <Input
                                             value={opt.text}
                                             onChange={(e) => updateChildOption(option.order, childIdx, optIdx, e.target.value)}
                                             placeholder={`Seçenek ${optIdx + 1}`}
                                             className="flex-1"
                                           />
+                                          {/* Option Reordering Dropdown */}
+                                          <Select
+                                            value={String(optIdx + 1)}
+                                            onValueChange={(value) => reorderChildOption(option.order, childIdx, optIdx, parseInt(value) - 1)}
+                                          >
+                                            <SelectTrigger className="w-20 h-9 text-sm bg-white">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-white z-50">
+                                              {Array.from({ length: child.options.length }, (_, i) => (
+                                                <SelectItem key={i} value={String(i + 1)}>
+                                                  {i + 1}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
                                           <Button
                                             type="button"
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => removeChildOption(option.order, childIdx, optIdx)}
+                                            className="text-red-600 hover:text-white hover:bg-red-600 disabled:opacity-50"
+                                            disabled={child.options.length <= 2}
                                           >
-                                            <Trash2 className="h-4 w-4" />
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
                                           </Button>
                                         </div>
                                         {/* Option attachment */}
-                                        <div className="pl-2">
+                                        <div className="pl-10">
                                           <AttachmentUpload
                                             attachment={opt.attachment}
                                             onChange={(attachment) => {
@@ -475,7 +622,7 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                                               newOptions[optIdx] = { ...newOptions[optIdx], attachment };
                                               updateChildQuestion(option.order, childIdx, { options: newOptions });
                                             }}
-                                            label="Ek Ekle"
+                                            label="Dosya Ekle"
                                           />
                                         </div>
                                       </div>
@@ -485,7 +632,8 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
                                       variant="outline"
                                       size="sm"
                                       onClick={() => addChildOption(option.order, childIdx)}
-                                      className="w-full"
+                                      className="w-full disabled:opacity-50"
+                                      disabled={child.options.length >= 10}
                                     >
                                       <Plus className="h-4 w-4 mr-2" />
                                       Seçenek Ekle
@@ -528,8 +676,9 @@ export function ConditionalEditor({ question, onChange }: ConditionalEditorProps
       </div>
 
       <div className="text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <strong>Not:</strong> Koşullu sorular tam olarak 3 seçenek içerir. Katılımcı bir seçenek seçtiğinde, o seçeneğe bağlı alt sorular gösterilir.
+        <strong>Not:</strong> Koşullu sorular 2-5 seçenek içerir. Katılımcı bir seçenek seçtiğinde, o seçeneğe bağlı alt sorular gösterilir.
       </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

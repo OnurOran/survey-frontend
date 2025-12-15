@@ -35,7 +35,7 @@ export function SingleSelectEditor({
   }, [onChange, question]);
 
   const addOption = () => {
-    if (question.options.length >= 5) return;
+    if (question.options.length >= 10) return;
     onChange({
       ...question,
       options: [
@@ -167,7 +167,8 @@ export function SingleSelectEditor({
               size="sm"
               onClick={addOption}
               style={{ backgroundColor: '#0055a5' }}
-              className="hover:opacity-90"
+              className="hover:opacity-90 disabled:opacity-50"
+              disabled={question.options.length >= 10}
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -227,7 +228,7 @@ export function SingleSelectEditor({
                     <AttachmentUpload
                       attachment={option.attachment}
                       onChange={(attachment) => updateOption(oIndex, 'attachment', attachment)}
-                      label="Ek Ekle"
+                      label="Dosya Ekle"
                     />
                   </div>
                 </div>

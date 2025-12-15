@@ -571,13 +571,23 @@ export default function ParticipatePage() {
                 {/* Parent options */}
                 <RadioGroup value={currentAnswer} onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}>
                   {currentQuestion.options.map((option) => (
-                    <div key={option.id}>
+                    <div key={option.id} className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value={option.id} id={option.id} />
                         <Label htmlFor={option.id} className="cursor-pointer font-medium">
                           {option.text}
                         </Label>
                       </div>
+                      {/* Parent Option Attachment */}
+                      {option.attachment && (
+                        <div className="ml-6">
+                          <AttachmentViewer
+                            attachment={option.attachment}
+                            apiUrl={API_URL}
+                            maxHeight="200px"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </RadioGroup>
@@ -604,11 +614,10 @@ export default function ParticipatePage() {
                             {/* Child Question Attachment */}
                             {childQuestion.attachment && (
                               <div className="mb-4">
-                                <img
-                                  src={getAttachmentUrl(childQuestion.attachment.id)}
-                                  alt={childQuestion.attachment.fileName}
-                                  className="max-w-full h-auto rounded border border-slate-200"
-                                  style={{ maxHeight: '300px' }}
+                                <AttachmentViewer
+                                  attachment={childQuestion.attachment}
+                                  apiUrl={API_URL}
+                                  maxHeight="300px"
                                 />
                               </div>
                             )}
@@ -620,11 +629,23 @@ export default function ParticipatePage() {
                                 onValueChange={(value) => handleAnswerChange(childQuestion.id, value)}
                               >
                                 {childQuestion.options.map((childOption) => (
-                                  <div key={childOption.id} className="flex items-center space-x-2">
-                                    <RadioGroupItem value={childOption.id} id={childOption.id} />
-                                    <Label htmlFor={childOption.id} className="cursor-pointer">
-                                      {childOption.text}
-                                    </Label>
+                                  <div key={childOption.id} className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      <RadioGroupItem value={childOption.id} id={childOption.id} />
+                                      <Label htmlFor={childOption.id} className="cursor-pointer">
+                                        {childOption.text}
+                                      </Label>
+                                    </div>
+                                    {/* Child Option Attachment */}
+                                    {childOption.attachment && (
+                                      <div className="ml-6">
+                                        <AttachmentViewer
+                                          attachment={childOption.attachment}
+                                          apiUrl={API_URL}
+                                          maxHeight="200px"
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </RadioGroup>
@@ -634,24 +655,36 @@ export default function ParticipatePage() {
                             {childQuestion.type === 'MultiSelect' && (
                               <div className="space-y-3">
                                 {childQuestion.options.map((childOption) => (
-                                  <div key={childOption.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={childOption.id}
-                                      checked={answers[childQuestion.id]?.includes(childOption.id) || false}
-                                      onCheckedChange={(checked) => {
-                                        const newValue = answers[childQuestion.id] ? [...answers[childQuestion.id]] : [];
-                                        if (checked) {
-                                          newValue.push(childOption.id);
-                                        } else {
-                                          const index = newValue.indexOf(childOption.id);
-                                          if (index > -1) newValue.splice(index, 1);
-                                        }
-                                        handleAnswerChange(childQuestion.id, newValue);
-                                      }}
-                                    />
-                                    <Label htmlFor={childOption.id} className="cursor-pointer">
-                                      {childOption.text}
-                                    </Label>
+                                  <div key={childOption.id} className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={childOption.id}
+                                        checked={answers[childQuestion.id]?.includes(childOption.id) || false}
+                                        onCheckedChange={(checked) => {
+                                          const newValue = answers[childQuestion.id] ? [...answers[childQuestion.id]] : [];
+                                          if (checked) {
+                                            newValue.push(childOption.id);
+                                          } else {
+                                            const index = newValue.indexOf(childOption.id);
+                                            if (index > -1) newValue.splice(index, 1);
+                                          }
+                                          handleAnswerChange(childQuestion.id, newValue);
+                                        }}
+                                      />
+                                      <Label htmlFor={childOption.id} className="cursor-pointer">
+                                        {childOption.text}
+                                      </Label>
+                                    </div>
+                                    {/* Child Option Attachment */}
+                                    {childOption.attachment && (
+                                      <div className="ml-6">
+                                        <AttachmentViewer
+                                          attachment={childOption.attachment}
+                                          apiUrl={API_URL}
+                                          maxHeight="200px"
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>

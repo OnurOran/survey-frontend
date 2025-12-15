@@ -13,6 +13,12 @@ const AVAILABLE_CONTENT_TYPES = [
   { value: 'image/jpg', label: 'JPG Images' },
   { value: 'image/webp', label: 'WebP Images' },
   { value: 'application/pdf', label: 'PDF Documents' },
+  { value: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', label: 'Word Documents (DOCX)' },
+  { value: 'application/msword', label: 'Word Documents (DOC)' },
+  { value: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', label: 'Excel Spreadsheets (XLSX)' },
+  { value: 'application/vnd.ms-excel', label: 'Excel Spreadsheets (XLS)' },
+  { value: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', label: 'PowerPoint Presentations (PPTX)' },
+  { value: 'application/vnd.ms-powerpoint', label: 'PowerPoint Presentations (PPT)' },
 ];
 
 export function FileUploadEditor({
