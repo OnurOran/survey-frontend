@@ -133,6 +133,26 @@ export default function SurveyReportPage() {
     }
   };
 
+  const handleSurveyorFileDownload = async (attachmentId: string, fileName: string) => {
+    try {
+      const response = await apiClient.get(`/attachments/${attachmentId}`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Dosya indirilirken bir hata oluştu');
+    }
+  };
+
   const handleExportPDF = async () => {
     if (!reportRef.current || !report) return;
 
@@ -421,15 +441,28 @@ export default function SurveyReportPage() {
                   <div>
                     <div className="text-sm font-semibold text-slate-700 mb-2">📎 Anket Eki</div>
                     {report.attachment.contentType.startsWith('image/') ? (
-                      <QuestionAttachmentImage
-                        attachmentId={report.attachment.id}
-                        fileName={report.attachment.fileName}
-                        className="max-w-md max-h-64 rounded border border-slate-300 object-contain"
-                      />
-                    ) : (
-                      <div className="text-sm text-slate-700 bg-slate-50 p-3 rounded">
-                        {report.attachment.fileName} ({(report.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                      <div className="space-y-2">
+                        <QuestionAttachmentImage
+                          attachmentId={report.attachment.id}
+                          fileName={report.attachment.fileName}
+                          className="max-w-md max-h-64 rounded border border-slate-300 object-contain"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSurveyorFileDownload(report.attachment!.id, report.attachment!.fileName)}
+                        >
+                          📎 İndir - {report.attachment.fileName}
+                        </Button>
                       </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSurveyorFileDownload(report.attachment!.id, report.attachment!.fileName)}
+                      >
+                        📎 İndir - {report.attachment.fileName} ({(report.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                      </Button>
                     )}
                   </div>
                 )}
@@ -525,6 +558,7 @@ export default function SurveyReportPage() {
               question={question}
               index={index}
               onFileDownload={handleFileDownload}
+              onSurveyorFileDownload={handleSurveyorFileDownload}
               participantResponse={isIndividualView ? participantResponse : undefined}
               forceExpandAll={forceExpandAll}
             />
@@ -596,12 +630,14 @@ function QuestionResultCard({
   question,
   index,
   onFileDownload,
+  onSurveyorFileDownload,
   participantResponse,
   forceExpandAll
 }: {
   question: QuestionReportDto;
   index: number;
   onFileDownload: (attachmentId: string, fileName: string) => void;
+  onSurveyorFileDownload: (attachmentId: string, fileName: string) => void;
   participantResponse?: ParticipantResponseDto;
   forceExpandAll?: boolean;
 }) {
@@ -633,7 +669,7 @@ function QuestionResultCard({
     switch (question.type) {
       case 'SingleSelect':
       case 'MultiSelect':
-        return <BarChartView data={question.optionResults || []} type={question.type} />;
+        return <BarChartView data={question.optionResults || []} type={question.type} onSurveyorFileDownload={onSurveyorFileDownload} />;
 
       case 'OpenText':
         return <OpenTextView
@@ -652,7 +688,7 @@ function QuestionResultCard({
         />;
 
       case 'Conditional':
-        return <ConditionalView question={question} onFileDownload={onFileDownload} />;
+        return <ConditionalView question={question} onFileDownload={onFileDownload} onSurveyorFileDownload={onSurveyorFileDownload} />;
 
       default:
         return <div className="text-sm text-slate-500">Desteklenmeyen soru tipi</div>;
@@ -678,15 +714,28 @@ function QuestionResultCard({
               <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
                 <div className="text-xs font-medium text-blue-900 mb-2">📎 Soru Eki</div>
                 {question.attachment.contentType.startsWith('image/') ? (
-                  <QuestionAttachmentImage
-                    attachmentId={question.attachment.id}
-                    fileName={question.attachment.fileName}
-                    className="max-w-sm max-h-48 rounded border border-blue-300 object-contain"
-                  />
-                ) : (
-                  <div className="text-sm text-blue-800">
-                    {question.attachment.fileName} ({(question.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  <div className="space-y-2">
+                    <QuestionAttachmentImage
+                      attachmentId={question.attachment.id}
+                      fileName={question.attachment.fileName}
+                      className="max-w-sm max-h-48 rounded border border-blue-300 object-contain"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSurveyorFileDownload(question.attachment!.id, question.attachment!.fileName)}
+                    >
+                      📎 İndir - {question.attachment.fileName}
+                    </Button>
                   </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSurveyorFileDownload(question.attachment!.id, question.attachment!.fileName)}
+                  >
+                    📎 İndir - {question.attachment.fileName} ({(question.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  </Button>
                 )}
               </div>
             )}
@@ -773,7 +822,7 @@ function QuestionResultCard({
 }
 
 // Bar Chart for SingleSelect and MultiSelect
-function BarChartView({ data, type }: { data: OptionResultDto[]; type: string }) {
+function BarChartView({ data, type, onSurveyorFileDownload }: { data: OptionResultDto[]; type: string; onSurveyorFileDownload: (attachmentId: string, fileName: string) => void }) {
   const chartData = data.map((opt) => ({
     name: opt.text.length > 30 ? opt.text.substring(0, 30) + '...' : opt.text,
     count: opt.selectionCount,
@@ -814,15 +863,28 @@ function BarChartView({ data, type }: { data: OptionResultDto[]; type: string })
               <div className="mt-2 ml-7 p-2 bg-white rounded border border-slate-200">
                 <div className="text-xs text-slate-600 mb-1">📎 Seçenek Eki</div>
                 {opt.attachment.contentType.startsWith('image/') ? (
-                  <QuestionAttachmentImage
-                    attachmentId={opt.attachment.id}
-                    fileName={opt.attachment.fileName}
-                    className="max-w-xs max-h-32 rounded object-contain"
-                  />
-                ) : (
-                  <div className="text-xs text-slate-700">
-                    {opt.attachment.fileName} ({(opt.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  <div className="space-y-2">
+                    <QuestionAttachmentImage
+                      attachmentId={opt.attachment.id}
+                      fileName={opt.attachment.fileName}
+                      className="max-w-xs max-h-32 rounded object-contain"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSurveyorFileDownload(opt.attachment!.id, opt.attachment!.fileName)}
+                    >
+                      📎 İndir - {opt.attachment.fileName}
+                    </Button>
                   </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSurveyorFileDownload(opt.attachment!.id, opt.attachment!.fileName)}
+                  >
+                    📎 İndir - {opt.attachment.fileName} ({(opt.attachment.sizeBytes / 1024).toFixed(2)} KB)
+                  </Button>
                 )}
               </div>
             )}
@@ -949,17 +1011,19 @@ function FileUploadView({
 // Conditional Question Results
 function ConditionalView({
   question,
-  onFileDownload
+  onFileDownload,
+  onSurveyorFileDownload
 }: {
   question: QuestionReportDto;
   onFileDownload: (attachmentId: string, fileName: string) => void;
+  onSurveyorFileDownload: (attachmentId: string, fileName: string) => void;
 }) {
   return (
     <div className="space-y-6">
       {/* Parent question options */}
       <div>
         <h4 className="font-semibold text-slate-900 mb-3">Ana Soru Dağılımı</h4>
-        <BarChartView data={question.optionResults || []} type="Conditional" />
+        <BarChartView data={question.optionResults || []} type="Conditional" onSurveyorFileDownload={onSurveyorFileDownload} />
       </div>
 
       {/* Child questions for each branch */}
@@ -975,7 +1039,7 @@ function ConditionalView({
                   {idx + 1}. {childQ.text}
                 </h5>
                 {childQ.type === 'SingleSelect' || childQ.type === 'MultiSelect' ? (
-                  <BarChartView data={childQ.optionResults || []} type={childQ.type} />
+                  <BarChartView data={childQ.optionResults || []} type={childQ.type} onSurveyorFileDownload={onSurveyorFileDownload} />
                 ) : childQ.type === 'OpenText' ? (
                   <OpenTextView responses={childQ.textResponses || []} currentPage={1} itemsPerPage={5} onPageChange={() => {}} />
                 ) : childQ.type === 'FileUpload' ? (
