@@ -14,7 +14,7 @@ import { AttachmentViewer } from '@/src/components/AttachmentViewer';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5123/api';
 
 // Helper function to get attachment URL
-const getAttachmentUrl = (attachmentId: string) => {
+const getAttachmentUrl = (attachmentId: number) => {
   return `${API_URL}/Attachments/${attachmentId}`;
 };
 
@@ -42,7 +42,7 @@ const getQuestionTypeLabel = (type: string) => {
 export default function SurveyDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const surveyId = params.id as string;
+  const surveyId = parseInt(params.id as string);
 
   const { data: survey, isLoading, error } = useSurvey(surveyId);
   const publishSurvey = usePublishSurvey();
@@ -51,27 +51,25 @@ export default function SurveyDetailPage() {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
-  const getSurveyStatus = (startDate: string | null, endDate: string | null) => {
+  const getSurveyStatus = (startDate: Date | null, endDate: Date | null) => {
     if (!startDate || !endDate) {
       return { label: 'Taslak', color: 'bg-gray-100 text-gray-700' };
     }
 
     const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
 
-    if (now < start) {
+    if (now < startDate) {
       return { label: 'Yakında Başlıyor', color: 'bg-blue-100 text-blue-700' };
-    } else if (now >= start && now <= end) {
+    } else if (now >= startDate && now <= endDate) {
       return { label: 'Aktif', color: 'bg-green-100 text-green-700' };
     } else {
       return { label: 'Sona Erdi', color: 'bg-red-100 text-red-700' };
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('tr-TR', {
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-';
+    return date.toLocaleDateString('tr-TR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -93,8 +91,8 @@ export default function SurveyDetailPage() {
       await publishSurvey.mutateAsync({
         surveyId,
         dates: {
-          StartDate: startDate.toISOString(),
-          EndDate: endDate.toISOString(),
+          StartDate: startDate,
+          EndDate: endDate,
         },
       });
       setPublishDialogOpen(false);

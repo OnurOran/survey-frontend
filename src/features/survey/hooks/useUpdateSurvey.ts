@@ -7,7 +7,7 @@ import { logError, parseApiError } from '@/src/lib/errors';
 /**
  * Hook to update an existing survey (draft only)
  */
-export function useUpdateSurvey(surveyId: string) {
+export function useUpdateSurvey(surveyId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({

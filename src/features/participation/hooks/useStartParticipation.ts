@@ -6,12 +6,13 @@ import { logError } from '@/src/lib/errors';
 /**
  * Hook to start a survey participation
  * Returns participationId
+ * @param slug - Survey slug in format: "{slug}-{surveyNumber}" (e.g., "musteri-memnuniyet-anketi-42")
  */
 export function useStartParticipation() {
   return useMutation({
-    mutationFn: async (surveyId: string) => {
+    mutationFn: async (slug: string) => {
       const request: StartParticipationRequest = {
-        SurveyId: surveyId,
+        Slug: slug,
       };
       const response = await apiClient.post<string>('/participations/start', request);
       return response.data;

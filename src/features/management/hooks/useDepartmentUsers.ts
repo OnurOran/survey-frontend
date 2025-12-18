@@ -6,7 +6,7 @@ import { logError } from '@/src/lib/errors';
 /**
  * Hook to fetch users in a specific department
  */
-export function useDepartmentUsers(departmentId: string | undefined) {
+export function useDepartmentUsers(departmentId: number | undefined) {
   return useQuery({
     queryKey: ['department-users', departmentId],
     queryFn: async () => {

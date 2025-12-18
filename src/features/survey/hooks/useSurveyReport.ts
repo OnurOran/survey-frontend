@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/lib/api';
 import type { SurveyReportDto, ParticipantResponseDto } from '@/src/types';
 
-export function useSurveyReport(surveyId: string | undefined) {
+export function useSurveyReport(surveyId: number | undefined) {
   return useQuery<SurveyReportDto>({
     queryKey: ['survey-report', surveyId],
     queryFn: async () => {
@@ -14,7 +14,7 @@ export function useSurveyReport(surveyId: string | undefined) {
   });
 }
 
-export function useParticipantResponse(surveyId: string | undefined, participationId: string | undefined) {
+export function useParticipantResponse(surveyId: number | undefined, participationId: number | undefined) {
   return useQuery<ParticipantResponseDto>({
     queryKey: ['participant-response', surveyId, participationId],
     queryFn: async () => {
@@ -24,6 +24,6 @@ export function useParticipantResponse(surveyId: string | undefined, participati
       });
       return response.data;
     },
-    enabled: !!surveyId && !!participationId && participationId.length > 0,
+    enabled: !!surveyId && !!participationId && participationId > 0,
   });
 }

@@ -18,7 +18,7 @@ import { cn } from '@/src/lib/utils';
 const COLORS = ['#0055a5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 // Authenticated Image Component for Answer Attachments
-function AuthenticatedImage({ attachmentId, fileName, className }: { attachmentId: string; fileName: string; className?: string }) {
+function AuthenticatedImage({ attachmentId, fileName, className }: { attachmentId: number; fileName: string; className?: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -52,7 +52,7 @@ function AuthenticatedImage({ attachmentId, fileName, className }: { attachmentI
 }
 
 // Authenticated Image Component for Question Attachments
-function QuestionAttachmentImage({ attachmentId, fileName, className }: { attachmentId: string; fileName: string; className?: string }) {
+function QuestionAttachmentImage({ attachmentId, fileName, className }: { attachmentId: number; fileName: string; className?: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -88,20 +88,20 @@ function QuestionAttachmentImage({ attachmentId, fileName, className }: { attach
 export default function SurveyReportPage() {
   const params = useParams();
   const router = useRouter();
-  const surveyId = params?.id as string;
+  const surveyId = parseInt(params?.id as string);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const { data: report, isLoading, error } = useSurveyReport(surveyId);
-  const [selectedParticipantId, setSelectedParticipantId] = useState<string>('');
+  const [selectedParticipantId, setSelectedParticipantId] = useState<number | null>(null);
   const [selectedParticipantName, setSelectedParticipantName] = useState<string>('');
-  const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantId);
+  const { data: participantResponse } = useParticipantResponse(surveyId, selectedParticipantId || 0);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [forceExpandAll, setForceExpandAll] = useState(false);
 
-  const handleParticipantSelect = (participationId: string, participantName?: string | null) => {
-    if (!participationId || participationId === 'all') {
-      setSelectedParticipantId('');
+  const handleParticipantSelect = (participationId: number | null, participantName?: string | null) => {
+    if (!participationId) {
+      setSelectedParticipantId(null);
       setSelectedParticipantName('');
       setComboboxOpen(false);
       return;
@@ -113,7 +113,7 @@ export default function SurveyReportPage() {
     setComboboxOpen(false);
   };
 
-  const handleFileDownload = async (attachmentId: string, fileName: string) => {
+  const handleFileDownload = async (attachmentId: number, fileName: string) => {
     try {
       const response = await apiClient.get(`/attachments/answers/${attachmentId}`, {
         responseType: 'blob',
@@ -133,7 +133,7 @@ export default function SurveyReportPage() {
     }
   };
 
-  const handleSurveyorFileDownload = async (attachmentId: string, fileName: string) => {
+  const handleSurveyorFileDownload = async (attachmentId: number, fileName: string) => {
     try {
       const response = await apiClient.get(`/attachments/${attachmentId}`, {
         responseType: 'blob',
@@ -500,7 +500,7 @@ export default function SurveyReportPage() {
                           <CommandGroup className="bg-white">
                             <CommandItem
                               value="all"
-                              onSelect={() => handleParticipantSelect('all')}
+                              onSelect={() => handleParticipantSelect(null)}
                               className="bg-white hover:bg-slate-100"
                             >
                               <Check
@@ -515,7 +515,7 @@ export default function SurveyReportPage() {
                               <CommandItem
                                 key={participant.participationId}
                                 value={participant.participantName || 'İsimsiz'}
-                                keywords={[participant.participationId]}
+                                keywords={[participant.participationId.toString()]}
                                 onSelect={() => handleParticipantSelect(participant.participationId, participant.participantName)}
                                 className="bg-white hover:bg-slate-100"
                               >
@@ -537,7 +537,7 @@ export default function SurveyReportPage() {
                     </PopoverContent>
                   </Popover>
                   {selectedParticipantId && (
-                    <Button variant="outline" onClick={() => handleParticipantSelect('all')} className="bg-white">
+                    <Button variant="outline" onClick={() => handleParticipantSelect(null)} className="bg-white">
                       Temizle
                     </Button>
                   )}
@@ -575,7 +575,7 @@ function IndividualResponseView({
   onFileDownload
 }: {
   response: ParticipantResponseDto;
-  onFileDownload: (attachmentId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: number, fileName: string) => void;
 }) {
   return (
     <Card>
@@ -636,8 +636,8 @@ function QuestionResultCard({
 }: {
   question: QuestionReportDto;
   index: number;
-  onFileDownload: (attachmentId: string, fileName: string) => void;
-  onSurveyorFileDownload: (attachmentId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: number, fileName: string) => void;
+  onSurveyorFileDownload: (attachmentId: number, fileName: string) => void;
   participantResponse?: ParticipantResponseDto;
   forceExpandAll?: boolean;
 }) {
@@ -822,7 +822,7 @@ function QuestionResultCard({
 }
 
 // Bar Chart for SingleSelect and MultiSelect
-function BarChartView({ data, type, onSurveyorFileDownload }: { data: OptionResultDto[]; type: string; onSurveyorFileDownload: (attachmentId: string, fileName: string) => void }) {
+function BarChartView({ data, type, onSurveyorFileDownload }: { data: OptionResultDto[]; type: string; onSurveyorFileDownload: (attachmentId: number, fileName: string) => void }) {
   const chartData = data.map((opt) => ({
     name: opt.text.length > 30 ? opt.text.substring(0, 30) + '...' : opt.text,
     count: opt.selectionCount,
@@ -958,7 +958,7 @@ function FileUploadView({
   selectedParticipantName,
 }: {
   responses: any[];
-  onFileDownload: (attachmentId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: number, fileName: string) => void;
   selectedParticipantName?: string;
 }) {
   // Filter responses if a specific participant is selected
@@ -1015,8 +1015,8 @@ function ConditionalView({
   onSurveyorFileDownload
 }: {
   question: QuestionReportDto;
-  onFileDownload: (attachmentId: string, fileName: string) => void;
-  onSurveyorFileDownload: (attachmentId: string, fileName: string) => void;
+  onFileDownload: (attachmentId: number, fileName: string) => void;
+  onSurveyorFileDownload: (attachmentId: number, fileName: string) => void;
 }) {
   return (
     <div className="space-y-6">

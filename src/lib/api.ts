@@ -1,5 +1,68 @@
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { logError } from './errors';
+
+/**
+ * Helper to recursively convert Date objects to ISO strings for API requests
+ */
+function serializeDates(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(serializeDates);
+  }
+
+  if (typeof obj === 'object') {
+    const serialized: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        serialized[key] = serializeDates(obj[key]);
+      }
+    }
+    return serialized;
+  }
+
+  return obj;
+}
+
+/**
+ * Helper to recursively parse ISO date strings to Date objects in API responses
+ */
+function deserializeDates(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === 'string') {
+    // ISO 8601 date pattern
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$/;
+    if (isoDatePattern.test(obj)) {
+      return new Date(obj);
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(deserializeDates);
+  }
+
+  if (typeof obj === 'object') {
+    const deserialized: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        deserialized[key] = deserializeDates(obj[key]);
+      }
+    }
+    return deserialized;
+  }
+
+  return obj;
+}
 
 /**
  * Create the main API client instance
@@ -15,6 +78,20 @@ export const apiClient = axios.create({
   },
   timeout: 30000, // 30 seconds
 });
+
+/**
+ * Request Interceptor
+ * Serialize Date objects to ISO strings before sending to API
+ */
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (config.data) {
+      config.data = serializeDates(config.data);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 type AuthenticatedRequest = AxiosRequestConfig & { _retry?: boolean; skipAuthRefresh?: boolean };
 
@@ -53,9 +130,16 @@ const refreshSession = async () => {
 /**
  * Response Interceptor
  * Handle 401 errors and automatically refresh tokens using httpOnly cookies
+ * Also deserialize ISO date strings to Date objects
  */
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Deserialize dates in response data
+    if (response.data) {
+      response.data = deserializeDates(response.data);
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = (error.config as AuthenticatedRequest) ?? {};
     const url = originalRequest.url ?? '';

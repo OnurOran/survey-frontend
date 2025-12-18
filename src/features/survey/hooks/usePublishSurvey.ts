@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { parseApiError, logError } from '@/src/lib/errors';
 
 interface PublishSurveyParams {
-  surveyId: string;
+  surveyId: number;
   dates: PublishSurveyRequest;
 }
 

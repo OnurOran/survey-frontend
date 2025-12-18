@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { parseApiError, logError } from '@/src/lib/errors';
 
 interface AddQuestionParams {
-  surveyId: string;
+  surveyId: number;
   question: CreateQuestionDto;
 }
 

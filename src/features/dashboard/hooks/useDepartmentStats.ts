@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/src/lib/api';
 
 interface DepartmentStatsResponse {
-  departmentId: string;
+  departmentId: number;
   totalSurveys: number;
   activeSurveys: number;
   totalParticipations: number;

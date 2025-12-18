@@ -16,7 +16,7 @@ interface User {
   username: string;
   permissions: string[];
   isSuperAdmin: boolean;
-  departmentId?: string;
+  departmentId?: number;
 }
 
 interface AuthContextType {
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       username: usernameClaim.value,
       permissions,
       isSuperAdmin: isSuperAdminClaim?.value === 'true',
-      departmentId: departmentIdClaim?.value,
+      departmentId: departmentIdClaim?.value ? parseInt(departmentIdClaim.value) : undefined,
     };
 
     console.log('✅ Extracted User:', user);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSurvey } from '@/src/features/survey/hooks';
+import { useSurveyBySlug } from '@/src/features/survey/hooks';
 import { useStartParticipation, useSubmitAnswer, useCompleteParticipation, useParticipationStatus } from '@/src/features/participation/hooks';
 import { useAuth } from '@/src/features/auth/context/AuthContext';
 import { Button } from '@/src/components/ui/button';
@@ -28,18 +28,17 @@ const getAttachmentUrl = (attachmentId: number) => {
 
 /**
  * Public Survey Participation Page
- * Accessible via shareable link: /participate/{surveyId}
+ * Accessible via shareable link: /p/{slug}
+ * Format: /p/musteri-memnuniyet-anketi-42
  */
 export default function ParticipatePage() {
   const params = useParams();
   const router = useRouter();
-  const surveyId = parseInt(params.surveyId as string);
+  const slug = params.slug as string;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const { data: survey, isLoading, error } = useSurvey(surveyId);
-  // Note: participationStatus requires slug, not surveyId. We'll need to construct it from survey data.
-  const slug = survey ? `${survey.slug}-${survey.surveyNumber}` : '';
-  const { data: participationStatus, isLoading: statusLoading } = useParticipationStatus(slug, !!survey);
+  const { data: survey, isLoading, error } = useSurveyBySlug(slug);
+  const { data: participationStatus, isLoading: statusLoading } = useParticipationStatus(slug);
   const startParticipation = useStartParticipation();
   const submitAnswer = useSubmitAnswer();
   const completeParticipation = useCompleteParticipation();
@@ -53,7 +52,6 @@ export default function ParticipatePage() {
 
   // Start participation when user begins
   const handleStart = async () => {
-    if (!slug) return;
     try {
       const participationIdResult = await startParticipation.mutateAsync(slug);
       setParticipationId(participationIdResult);
@@ -272,7 +270,7 @@ export default function ParticipatePage() {
                 Lütfen devam etmek için giriş yapın.
               </p>
               <Button
-                onClick={() => router.push(`/login?returnUrl=/participate/${surveyId}`)}
+                onClick={() => router.push(`/login?returnUrl=/p/${slug}`)}
                 style={{ backgroundColor: '#0055a5' }}
                 className="w-full hover:opacity-90"
               >
@@ -477,7 +475,7 @@ export default function ParticipatePage() {
             )}
             {/* Single Select (Radio) */}
             {currentQuestion.type === 'SingleSelect' && (
-              <RadioGroup value={currentAnswer} onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}>
+              <RadioGroup value={currentAnswer?.toString()} onValueChange={(value) => handleAnswerChange(currentQuestion.id, parseInt(value))}>
                 {currentQuestion.options.map((option) => (
                   <div key={option.id} className="space-y-2">
                     <div className="flex items-center space-x-2">
@@ -572,7 +570,7 @@ export default function ParticipatePage() {
             {currentQuestion.type === 'Conditional' && (
               <div className="space-y-4">
                 {/* Parent options */}
-                <RadioGroup value={currentAnswer} onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}>
+                <RadioGroup value={currentAnswer?.toString()} onValueChange={(value) => handleAnswerChange(currentQuestion.id, parseInt(value))}>
                   {currentQuestion.options.map((option) => (
                     <div key={option.id} className="space-y-2">
                       <div className="flex items-center space-x-2">
@@ -597,7 +595,7 @@ export default function ParticipatePage() {
 
                 {/* Child questions (shown when parent option is selected) */}
                 {currentAnswer && currentQuestion.options.map((option) => {
-                  if (option.id.toString() !== currentAnswer) return null;
+                  if (option.id !== currentAnswer) return null;
                   if (!option.childQuestions || option.childQuestions.length === 0) return null;
 
                   return (
@@ -628,8 +626,8 @@ export default function ParticipatePage() {
                             {/* Child SingleSelect */}
                             {childQuestion.type === 'SingleSelect' && (
                               <RadioGroup
-                                value={answers[childQuestion.id]}
-                                onValueChange={(value) => handleAnswerChange(childQuestion.id, value)}
+                                value={answers[childQuestion.id]?.toString()}
+                                onValueChange={(value) => handleAnswerChange(childQuestion.id, parseInt(value))}
                               >
                                 {childQuestion.options.map((childOption) => (
                                   <div key={childOption.id} className="space-y-2">

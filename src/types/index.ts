@@ -72,7 +72,7 @@ export interface AttachmentDto {
 
 // Attachment metadata from backend (READ operations)
 export interface AttachmentMetadata {
-  id: string;
+  id: number;
   fileName: string;
   contentType: string;
   sizeBytes: number;
@@ -119,39 +119,43 @@ export interface CreateOptionDto {
 }
 
 export interface PublishSurveyRequest {
-  StartDate: string; // ISO 8601 format (PascalCase for C# backend)
-  EndDate: string; // ISO 8601 format (PascalCase for C# backend)
+  StartDate: Date; // Date object (PascalCase for C# backend)
+  EndDate: Date; // Date object (PascalCase for C# backend)
 }
 
 export interface SurveyListItemDto {
-  id: string;
+  id: number;
+  surveyNumber: number;
+  slug: string;
   title: string;
   description: string;
-  departmentId: string;
+  departmentId: number;
   accessType: AccessType;
   isActive: boolean;
-  createdAt: string;
-  startDate: string | null;
-  endDate: string | null;
+  createdAt: Date;
+  startDate: Date | null;
+  endDate: Date | null;
   createdBy: string;
 }
 
 export interface SurveyDetailDto {
-  id: string;
+  id: number;
+  surveyNumber: number;
+  slug: string;
   title: string;
   description: string;
   introText?: string | null;
   consentText?: string | null;
   outroText?: string | null;
   accessType: AccessType;
-  startDate: string | null;
-  endDate: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
   questions: QuestionDto[];
   attachment?: AttachmentMetadata | null;
 }
 
 export interface QuestionDto {
-  id: string;
+  id: number;
   text: string;
   description?: string | null;
   type: QuestionType;
@@ -163,7 +167,7 @@ export interface QuestionDto {
 }
 
 export interface OptionDto {
-  id: string;
+  id: number;
   text: string;
   order: number;
   value: number;
@@ -176,23 +180,23 @@ export interface OptionDto {
 // ============================================
 
 export interface StartParticipationRequest {
-  SurveyId: string; // PascalCase for C# backend
+  Slug: string; // PascalCase for C# backend - format: "{slug}-{number}"
 }
 
 export interface SubmitAnswerRequest {
-  questionId: string;
+  questionId: number;
   textValue?: string | null;
-  optionIds: string[];
+  optionIds: number[];
   attachment?: AttachmentDto | null;
 }
 
-// Response is just a string (participationId)
-export type StartParticipationResponse = string;
+// Response is just a number (participationId)
+export type StartParticipationResponse = number;
 
 export interface ParticipationStatusResult {
   hasParticipated: boolean;
   isCompleted: boolean;
-  completedAt: string | null;
+  completedAt: Date | null;
 }
 
 // ============================================
@@ -200,7 +204,7 @@ export interface ParticipationStatusResult {
 // ============================================
 
 export interface RoleDto {
-  id: string;
+  id: number;
   name: string;
   description: string;
   permissions: string[];
@@ -213,32 +217,32 @@ export interface CreateRoleCommand {
 }
 
 export interface PermissionDto {
-  id: string;
+  id: number;
   name: string;
   description: string;
 }
 
 export interface DepartmentDto {
-  id: string;
+  id: number;
   name: string;
   externalIdentifier: string;
 }
 
 export interface UserDto {
-  id: string;
+  id: number;
   username: string;
   email: string;
   roles: string[];
 }
 
 export interface AssignRoleToUserCommand {
-  userId: string;
-  roleId: string;
+  userId: number;
+  roleId: number;
 }
 
 export interface RemoveRoleFromUserCommand {
-  userId: string;
-  roleId: string;
+  userId: number;
+  roleId: number;
 }
 
 // ============================================
@@ -256,14 +260,14 @@ export interface ApiErrorResponse {
 // ============================================
 
 export interface SurveyReportDto {
-  surveyId: string;
+  surveyId: number;
   title: string;
   description: string;
   introText?: string | null;
   outroText?: string | null;
   accessType: AccessType;
-  startDate: string | null;
-  endDate: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
   isActive: boolean;
   totalParticipations: number;
   completedParticipations: number;
@@ -274,14 +278,14 @@ export interface SurveyReportDto {
 }
 
 export interface ParticipantSummaryDto {
-  participationId: string;
+  participationId: number;
   participantName: string | null;
   isCompleted: boolean;
-  startedAt: string;
+  startedAt: Date;
 }
 
 export interface QuestionReportDto {
-  questionId: string;
+  questionId: number;
   text: string;
   type: QuestionType;
   order: number;
@@ -296,7 +300,7 @@ export interface QuestionReportDto {
 }
 
 export interface OptionResultDto {
-  optionId: string;
+  optionId: number;
   text: string;
   order: number;
   selectionCount: number;
@@ -305,46 +309,46 @@ export interface OptionResultDto {
 }
 
 export interface TextResponseDto {
-  participationId: string;
+  participationId: number;
   participantName?: string | null;
   textValue: string;
-  submittedAt: string;
+  submittedAt: Date;
 }
 
 export interface FileResponseDto {
-  answerId: string;
-  attachmentId: string;
-  participationId: string;
+  answerId: number;
+  attachmentId: number;
+  participationId: number;
   participantName?: string | null;
   fileName: string;
   contentType: string;
   sizeBytes: number;
-  submittedAt: string;
+  submittedAt: Date;
 }
 
 export interface ConditionalBranchResultDto {
-  parentOptionId: string;
+  parentOptionId: number;
   parentOptionText: string;
   participantCount: number;
   childQuestions: QuestionReportDto[];
 }
 
 export interface ParticipantResponseDto {
-  participationId: string;
+  participationId: number;
   participantName: string | null;
   isCompleted: boolean;
-  startedAt: string;
-  completedAt: string | null;
+  startedAt: Date;
+  completedAt: Date | null;
   answers: ParticipantAnswerDto[];
 }
 
 export interface ParticipantAnswerDto {
-  questionId: string;
+  questionId: number;
   questionText: string;
   textValue: string | null;
   selectedOptions: string[];
   fileName: string | null;
-  answerId: string | null;
+  answerId: number | null;
 }
 
 // ============================================

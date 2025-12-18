@@ -29,7 +29,7 @@ export default function RoleManagementPage() {
 
   // For Super Admin: allow department selection
   // For Manager: use their department ID directly
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+  const [selectedDepartment, setSelectedDepartment] = useState<number | null>(
     user?.isSuperAdmin ? null : (user?.departmentId || null)
   );
 
@@ -45,14 +45,14 @@ export default function RoleManagementPage() {
   }, [departments, selectedDepartment, user?.isSuperAdmin]);
 
   const handleAssignRole = useCallback(
-    async (userId: string, roleId: string) => {
+    async (userId: number, roleId: number) => {
       await assignRole.mutateAsync({ userId, roleId });
     },
     [assignRole]
   );
 
   const handleRemoveRole = useCallback(
-    async (userId: string, roleId: string) => {
+    async (userId: number, roleId: number) => {
       await removeRole.mutateAsync({ userId, roleId });
     },
     [removeRole]
@@ -65,7 +65,7 @@ export default function RoleManagementPage() {
 
   // Prepare user rows (hide current user)
   const tableUsers = useMemo(
-    () => (users ?? []).filter((u) => u.id !== user?.userId),
+    () => (users ?? []).filter((u) => u.id.toString() !== user?.userId),
     [users, user?.userId]
   );
 
@@ -140,7 +140,7 @@ export default function RoleManagementPage() {
           <select
             onChange={(e) => {
               if (e.target.value) {
-                handleAssignRole(row.original.id, e.target.value);
+                handleAssignRole(row.original.id, parseInt(e.target.value));
                 e.target.value = '';
               }
             }}
@@ -195,7 +195,7 @@ export default function RoleManagementPage() {
                 id="departmentSelect"
                 className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 value={selectedDepartment ?? ''}
-                onChange={(e) => setSelectedDepartment(e.target.value || null)}
+                onChange={(e) => setSelectedDepartment(e.target.value ? parseInt(e.target.value) : null)}
               >
                 <option value="">Departman seçin</option>
                 {departments?.map((dept) => (
@@ -237,6 +237,7 @@ export default function RoleManagementPage() {
                     },
                   ]}
                   emptyMessage="Bu departmanda kullanıcı bulunamadı"
+                  enableColumnVisibility={false}
                 />
               )}
             </CardContent>

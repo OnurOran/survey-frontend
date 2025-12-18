@@ -15,7 +15,7 @@ import { CreateSurveyRequest, SurveyDetailDto } from '@/src/types';
 export default function EditSurveyPage() {
   const params = useParams();
   const router = useRouter();
-  const surveyId = params.id as string;
+  const surveyId = parseInt(params.id as string);
 
   const { data: survey, isLoading, error } = useSurvey(surveyId);
   const updateSurvey = useUpdateSurvey(surveyId);

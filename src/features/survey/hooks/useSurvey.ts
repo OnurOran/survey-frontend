@@ -5,7 +5,7 @@ import { SurveyDetailDto } from '@/src/types';
 /**
  * Hook to fetch a single survey by ID
  */
-export function useSurvey(surveyId: string | undefined) {
+export function useSurvey(surveyId: number | undefined) {
   return useQuery({
     queryKey: ['survey', surveyId],
     queryFn: async () => {

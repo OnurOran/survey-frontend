@@ -10,6 +10,7 @@ import { Label } from '@/src/components/ui/label';
 import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import { DataTable } from '@/src/components/ui/data-table';
 import { SurveyListItemDto } from '@/src/types';
+import { generateSurveySlug } from '@/src/lib/surveyUtils';
 
 type SurveyStatus = {
   value: 'draft' | 'published';
@@ -25,9 +26,9 @@ const getSurveyStatus = (survey: SurveyListItemDto): SurveyStatus => {
   return { value: 'published', label: 'Yayınlanmış', color: 'bg-green-100 text-green-700' };
 };
 
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '—';
-  return new Date(dateString).toLocaleString('tr-TR', {
+const formatDate = (date: Date | null) => {
+  if (!date) return '—';
+  return date.toLocaleString('tr-TR', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -45,12 +46,12 @@ export default function SurveysPage() {
   const publishSurvey = usePublishSurvey();
 
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
-  const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
+  const [selectedSurveyId, setSelectedSurveyId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const handlePublishClick = (surveyId: string) => {
+  const handlePublishClick = (surveyId: number) => {
     setSelectedSurveyId(surveyId);
     setStartDate(null);
     setEndDate(null);
@@ -72,8 +73,8 @@ export default function SurveysPage() {
       await publishSurvey.mutateAsync({
         surveyId: selectedSurveyId,
         dates: {
-          StartDate: startDate.toISOString(),
-          EndDate: endDate.toISOString(),
+          StartDate: startDate,
+          EndDate: endDate,
         },
       });
       setPublishDialogOpen(false);
@@ -133,12 +134,12 @@ export default function SurveysPage() {
         header: ({ column }) => {
           return <span className="text-slate-800 font-semibold">Başlangıç</span>;
         },
-        cell: ({ getValue }) => <span>{formatDate(getValue<string | null>())}</span>,
+        cell: ({ getValue }) => <span>{formatDate(getValue<Date | null>())}</span>,
       },
       {
         accessorKey: 'endDate',
         header: 'Bitiş',
-        cell: ({ getValue }) => <span>{formatDate(getValue<string | null>())}</span>,
+        cell: ({ getValue }) => <span>{formatDate(getValue<Date | null>())}</span>,
       },
       {
         accessorKey: 'createdBy',
@@ -165,7 +166,7 @@ export default function SurveysPage() {
                   Düzenle
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => router.push(`/surveys/${survey.id}`)}>
+              <Button variant="outline" size="sm" onClick={() => router.push(`/p/${generateSurveySlug(survey.slug, survey.surveyNumber)}`)}>
                 Ön İzleme
               </Button>
               {!isDraft && (
@@ -251,6 +252,7 @@ export default function SurveysPage() {
           ]}
           toolbarContent={null}
           emptyMessage="Henüz anket bulunmuyor"
+          enableColumnVisibility={false}
         />
       </div>
 
