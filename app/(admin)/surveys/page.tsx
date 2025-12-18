@@ -11,6 +11,7 @@ import { DateTimePicker } from '@/src/components/ui/date-time-picker';
 import { DataTable } from '@/src/components/ui/data-table';
 import { SurveyListItemDto } from '@/src/types';
 import { generateSurveySlug } from '@/src/lib/surveyUtils';
+import { toast } from 'sonner';
 
 type SurveyStatus = {
   value: 'draft' | 'published';
@@ -81,6 +82,42 @@ export default function SurveysPage() {
       setSelectedSurveyId(null);
     } catch {
       // handled by mutation hook
+    }
+  };
+
+  const handleCopySurveyLink = async (survey: SurveyListItemDto) => {
+    const slug = generateSurveySlug(survey.slug, survey.surveyNumber);
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const url = `${baseUrl}/p/${slug}`;
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success('Anket bağlantısı kopyalandı');
+        return;
+      } catch {
+        // Fallback to manual copy below.
+      }
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      if (copied) {
+        toast.success('Anket bağlantısı kopyalandı');
+      } else {
+        toast.error('Bağlantı kopyalanamadı');
+      }
+    } catch {
+      toast.error('Bağlantı kopyalanamadı');
     }
   };
 
@@ -166,8 +203,8 @@ export default function SurveysPage() {
                   Düzenle
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => router.push(`/p/${generateSurveySlug(survey.slug, survey.surveyNumber)}`)}>
-                Ön İzleme
+              <Button variant="outline" size="sm" onClick={() => handleCopySurveyLink(survey)}>
+                Bağlantıyı Kopyala
               </Button>
               {!isDraft && (
                 <Button

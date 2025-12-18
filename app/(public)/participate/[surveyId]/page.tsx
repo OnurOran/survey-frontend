@@ -298,11 +298,6 @@ export default function ParticipatePage() {
               <p className="text-slate-700 whitespace-pre-wrap">
                 {survey.outroText || 'Anket katılımınız başarıyla tamamlandı.\n\nKatkılarınız için teşekkür ederiz.'}
               </p>
-              <div className="mt-6">
-                <Button onClick={() => router.push('/')} variant="outline">
-                  Ana Sayfaya Dön
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
